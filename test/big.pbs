@@ -1,0 +1,36 @@
+#PBS -N big
+#PBS -e /home/xiq322/Proximal-SQP/test/output/TEST_big.err
+#PBS -o /home/xiq322/Proximal-SQP/test/output/TEST_big.out
+#PBS -l nodes=1:ppn=1
+#PBS -l vmem=16gb,pmem=16gb
+#PBS -q long
+#PBS -V
+
+ulimit -a
+
+export ARCHDEFS=/home/xiq322/cutest/archdefs/
+export SIFDECODE=/home/xiq322/cutest/sifdecode/
+export MASTSIF=/home/xiq322/cutest/mastsif/
+export CUTEST=/home/xiq322/cutest/cutest/
+export MYARCH="pc64.lnx.gfo"
+export PYCUTEST_CACHE="/home/xiq322/pycutest_cache"
+
+cd /home/xiq322/Proximal-SQP/test
+
+/home/xiq322/miniconda3/bin/python main.py --name MSS1 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name ELEC --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name SPIN2OP --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name LCH --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name LCH --tau 1 --reg 1000
+/home/xiq322/miniconda3/bin/python main.py --name CHAIN --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name MSS2 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name MSS2 --tau 0.0001
+/home/xiq322/miniconda3/bin/python main.py --name EXTROSNBNE --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name SPINOP --tau 1
+
+# /home/xiq322/miniconda3/bin/python main.py --name EXTROSNBNE --tau 1
+# /home/xiq322/miniconda3/bin/python main.py --name MSS2 --tau 0.00001
+# /home/xiq322/miniconda3/bin/python main.py --name CHAIN --tau 1
+
+# /home/xiq322/miniconda3/bin/python main.py --name MSS2 --tau 1
+# /home/xiq322/miniconda3/bin/python main.py --name EXTROSNBNE --tau 1

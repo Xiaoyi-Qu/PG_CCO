@@ -1,0 +1,73 @@
+#PBS -N small
+#PBS -e /home/xiq322/Proximal-SQP/test/output/TEST_small.err
+#PBS -o /home/xiq322/Proximal-SQP/test/output/TEST_small.out
+#PBS -l nodes=1:ppn=1
+#PBS -l vmem=8gb,pmem=8gb
+#PBS -q long
+#PBS -V
+
+ulimit -a
+
+export ARCHDEFS=/home/xiq322/cutest/archdefs/
+export SIFDECODE=/home/xiq322/cutest/sifdecode/
+export MASTSIF=/home/xiq322/cutest/mastsif/
+export CUTEST=/home/xiq322/cutest/cutest/
+export MYARCH="pc64.lnx.gfo"
+export PYCUTEST_CACHE="/home/xiq322/pycutest_cache"
+
+cd /home/xiq322/Proximal-SQP/test
+
+
+/home/xiq322/miniconda3/bin/python main.py --name BT1 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT11 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT12 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT2 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT2 --tau 1 --reg 1000
+/home/xiq322/miniconda3/bin/python main.py --name BT3 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT4 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT4 --tau 0.01
+/home/xiq322/miniconda3/bin/python main.py --name BT5 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT6 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT7 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT7 --tau 1 --reg 10000
+/home/xiq322/miniconda3/bin/python main.py --name BT8 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BT8 --tau 1 --reg 1000000
+/home/xiq322/miniconda3/bin/python main.py --name BT9 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name BYRDSPHR --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name DIXCHLNG --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name DIXCHLNG --tau 1 --reg 1000
+/home/xiq322/miniconda3/bin/python main.py --name GENHS28 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS100LNP --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS111LNP --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS26 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS27 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS28 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS39 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS40 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS42 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS46 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS47 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS48 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS49 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS50 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS51 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS52 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS56 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS56 --tau 0.01
+/home/xiq322/miniconda3/bin/python main.py --name HS6 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS6 --tau 0.1
+/home/xiq322/miniconda3/bin/python main.py --name HS61 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS7 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS77 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS78 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS79 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name HS9 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name MARATOS --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name MWRIGHT --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name ORTHREGB --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name S316-322 --tau 1
+/home/xiq322/miniconda3/bin/python main.py --name S316-322 --tau 1 --reg 1000
+/home/xiq322/miniconda3/bin/python main.py --name STREGNE --tau 1
+
+
+
