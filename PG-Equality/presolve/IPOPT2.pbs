@@ -1,0 +1,63 @@
+#PBS -N Ipopt_test2
+#PBS -e /home/xiq322/Proximal-SQP/presolve/output/test.err
+#PBS -o /home/xiq322/Proximal-SQP/presolve/output/test.out
+#PBS -l nodes=1:ppn=2
+#PBS -l vmem=8gb,pmem=8gb
+#PBS -q medium
+#PBS -V
+
+ulimit -a
+
+export ARCHDEFS=/home/xiq322/cutest/archdefs/
+export SIFDECODE=/home/xiq322/cutest/sifdecode/
+export MASTSIF=/home/xiq322/cutest/mastsif/
+export CUTEST=/home/xiq322/cutest/cutest/
+export MYARCH="pc64.lnx.gfo"
+export PYCUTEST_CACHE="/home/xiq322/pycutest_cache"
+
+cd /home/xiq322/Proximal-SQP/presolve
+
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT1
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT11
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT12
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT2
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT3
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT4
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT5
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT6
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT7
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT8
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BT9
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name BYRDSPHR
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name DIXCHLNG
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name GENHS28
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS100LNP
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS111LNP
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS26
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS27
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS28
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS39
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS40
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS42
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS46
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS47
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS48
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS49
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS50
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS51
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS52
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS56
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS6
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS61
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS7
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS77
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS78
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS79
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name HS9
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name MARATOS
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name MWRIGHT
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name ORTHREGB
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name S316-322
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name STREGNE
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name LCH
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name SPIN2OP

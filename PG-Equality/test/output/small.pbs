@@ -1,0 +1,54 @@
+#PBS -N small
+#PBS -e /home/xiq322/Proximal-SQP/test/output/small.err
+#PBS -o /home/xiq322/Proximal-SQP/test/output/small.out
+#PBS -l nodes=1:ppn=1
+#PBS -l vmem=4gb,pmem=4gb
+#PBS -q medium
+#PBS -V
+
+ulimit -a
+
+cd /home/xiq322/Proximal-SQP/test
+
+/home/xiq322/miniconda3/bin/python main.py --name BT1
+/home/xiq322/miniconda3/bin/python main.py --name BT11
+/home/xiq322/miniconda3/bin/python main.py --name BT12
+/home/xiq322/miniconda3/bin/python main.py --name BT2
+/home/xiq322/miniconda3/bin/python main.py --name BT3
+/home/xiq322/miniconda3/bin/python main.py --name BT4
+/home/xiq322/miniconda3/bin/python main.py --name BT5
+/home/xiq322/miniconda3/bin/python main.py --name BT6
+/home/xiq322/miniconda3/bin/python main.py --name BT7
+/home/xiq322/miniconda3/bin/python main.py --name BT8
+/home/xiq322/miniconda3/bin/python main.py --name BT9
+/home/xiq322/miniconda3/bin/python main.py --name BYRDSPHR
+/home/xiq322/miniconda3/bin/python main.py --name DIXCHLNG
+/home/xiq322/miniconda3/bin/python main.py --name GENHS28
+/home/xiq322/miniconda3/bin/python main.py --name HS100LNP
+/home/xiq322/miniconda3/bin/python main.py --name HS111LNP
+/home/xiq322/miniconda3/bin/python main.py --name HS26
+/home/xiq322/miniconda3/bin/python main.py --name HS27
+/home/xiq322/miniconda3/bin/python main.py --name HS28
+/home/xiq322/miniconda3/bin/python main.py --name HS39
+/home/xiq322/miniconda3/bin/python main.py --name HS40
+/home/xiq322/miniconda3/bin/python main.py --name HS42
+/home/xiq322/miniconda3/bin/python main.py --name HS46
+/home/xiq322/miniconda3/bin/python main.py --name HS47
+/home/xiq322/miniconda3/bin/python main.py --name HS48
+/home/xiq322/miniconda3/bin/python main.py --name HS49
+/home/xiq322/miniconda3/bin/python main.py --name HS50
+/home/xiq322/miniconda3/bin/python main.py --name HS51
+/home/xiq322/miniconda3/bin/python main.py --name HS52
+/home/xiq322/miniconda3/bin/python main.py --name HS56
+/home/xiq322/miniconda3/bin/python main.py --name HS6
+/home/xiq322/miniconda3/bin/python main.py --name HS61
+/home/xiq322/miniconda3/bin/python main.py --name HS7
+/home/xiq322/miniconda3/bin/python main.py --name HS77
+/home/xiq322/miniconda3/bin/python main.py --name HS78
+/home/xiq322/miniconda3/bin/python main.py --name HS79
+/home/xiq322/miniconda3/bin/python main.py --name HS9
+/home/xiq322/miniconda3/bin/python main.py --name MARATOS
+/home/xiq322/miniconda3/bin/python main.py --name MWRIGHT
+/home/xiq322/miniconda3/bin/python main.py --name ORTHREGB
+/home/xiq322/miniconda3/bin/python main.py --name S316-322
+/home/xiq322/miniconda3/bin/python main.py --name STREGNE

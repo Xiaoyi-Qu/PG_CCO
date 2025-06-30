@@ -1,0 +1,27 @@
+The following discussion is for our method.
+-----Sparsity------
+Test problems with no sparsity
+    - Converge to KKT point(but not global minimizer): BT1, BT7
+    - Large KKT-measure: BT2, BT8, DIXCHLNG, HS78
+    - Gurobi error: BT4, HS56 
+For the first two cases, we handle them by enforcing larger regularzation parameter. 
+For the thrid case, we reduce the merit parameter so that more penalty is added to constraint violation.
+
+-----Status-----
+MAX status: 
+    - BT2, BT8, DIXCHLNG, ELEC, LCH.
+    - HS111LNP(0.002091), HS26(4.580163348549879), HS47(0.000963), HS49(0.002402), 
+      HS78(0.035417). KKT measure is listed in the parenthesis.
+Error status: BT4, HS56.
+Opt status: rest.
+
+--------Small proximal parameter--------
+BT7, BT8.
+
+--------Timing-------
+Our method takes far less time than the competing method. Test problem "LCH" is an exception. I have a
+rough guess on why LCH takes so much time. It has something to do with subproblem reformulation and 
+I am still testing to verify my guess.
+
+### EXTROSNBNE test problem is still running. The above discussion excludes this test problem.
+

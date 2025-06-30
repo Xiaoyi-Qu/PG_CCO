@@ -1,0 +1,20 @@
+#PBS -N EXTROSNBNE
+#PBS -e /home/xiq322/Proximal-SQP/presolve/output/test.err
+#PBS -o /home/xiq322/Proximal-SQP/presolve/output/test.out
+#PBS -l nodes=1:ppn=2
+#PBS -l vmem=8gb,pmem=8gb
+#PBS -q medium
+#PBS -V
+
+ulimit -a
+
+export ARCHDEFS=/home/xiq322/cutest/archdefs/
+export SIFDECODE=/home/xiq322/cutest/sifdecode/
+export MASTSIF=/home/xiq322/cutest/mastsif/
+export CUTEST=/home/xiq322/cutest/cutest/
+export MYARCH="pc64.lnx.gfo"
+export PYCUTEST_CACHE="/home/xiq322/pycutest_cache"
+
+cd /home/xiq322/Proximal-SQP/presolve
+
+/home/xiq322/miniconda3/bin/python Ipopt_test2.py --name EXTROSNBNE

@@ -1,0 +1,3 @@
+/etc/profile: line 4: id: command not found
+/etc/profile: line 4: [: : integer expression expected
+/home/xiq322/.profile: line 23: /bin/brew: No such file or directory
