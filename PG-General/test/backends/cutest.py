@@ -7,7 +7,7 @@
 
 import numpy as np
 
-class Problem:
+class Cutest:
     def __init__(self, problem):
         self.p = problem
 

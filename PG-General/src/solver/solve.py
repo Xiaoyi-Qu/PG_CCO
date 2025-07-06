@@ -17,6 +17,7 @@ sys.path.append("../")
 sys.path.append("../..")
 from src.solver.algorithm import PG_General
 
+
 def solve(p, r, x, alpha, params, normal_step_strategy,
             tangential_step_strategy):
     '''
@@ -37,14 +38,7 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
     s = np.zeros(len(x))
     judge = "No"
     ls_judge = -1
-    num_feval = 0
-    num_geval = 0
-    num_ceval = 0
-    num_Jeval = 0
     elapsed_time = 0
-    # info['x'] = x
-    # info['status'] = status
-    # info["iteration"] = iteration
 
     info = {}
     g = p.obj(x, gradient=True)[1] 
@@ -53,16 +47,16 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
     maxit = params["max_iter"]
     tol_stationarity = params["tol_stationarity"]
     tol_feasibility = params["tol_feasibility"]
-    eta = params["eta"]
-    xi  = params["xi"]
-    printevery = params["printevery"]
-    outID = params["filename"] + "_tau_" + str(params["tau"]) + "_lambda_" + str(r.penalty)
+    # eta = params["eta"]
+    # xi  = params["xi"]
+    # printevery = params["printevery"]
+    # outID = params["filename"] + "_tau_" + str(params["tau"]) + "_lambda_" + str(r.penalty)
     solver = PG_General(p, r, params)
 
     # Eval counter
-    num_geval += 1
-    num_ceval += 1
-    num_Jeval += 1
+    # num_geval += 1
+    # num_ceval += 1
+    # num_Jeval += 1
 
     # Print the problem information
     helper.print_prob(x,p,r,outID)
@@ -89,46 +83,7 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         elif np.linalg.norm(np.dot(np.transpose(J),c), ord=2) <= 1e-12:
             v = np.zeros(dim)
         else:
-            if normal_step_strategy == "Cauchy":
-                v = algo.tr_cauchypoint(x, alpha)
-            elif normal_step_strategy == "Newton":
-                v = algo.tr_newton(alpha, c, J)
-            elif normal_step_strategy == "Newton+Cauchy":
-                v_cauchy = algo.tr_cauchypoint(x, alpha)
-                v_newton = algo.tr_newton(alpha, c, J)
-                feasibility_cauchy = np.linalg.norm(c+np.dot(J,v_cauchy),ord=2)
-                feasibility_newton = np.linalg.norm(c+np.dot(J,v_newton),ord=2)
-                if feasibility_cauchy > feasibility_newton:
-                    v = v_newton
-                    vstatus = "Newton"
-                else:
-                    v = v_cauchy
-                    vstatus = "Cauchy"
-        time_v = time.process_time() - start_v    # store the timing for computing normal step.
-
-        # if np.linalg.norm(np.dot(np.transpose(J),c), ord=2) != 0:
-        #     # Compute tangential component vk
-        #     if normal_step_strategy == "Cauchy":
-        #         v = algo.tr_cauchypoint(x, alpha)
-        #     elif normal_step_strategy == "Newton":
-        #         v = algo.tr_newton(alpha, c, J)
-        #     elif normal_step_strategy == "NewtonCG":
-        #         pass
-        # else:
-        #     v = np.zeros(dim)
-        #     if c.any() != 0:
-        #         status = 2
-        #         print("Infeasible stationary point!")
-        #         break
-
-        # Compute the regularization parameter lower bound
-        # nrow = np.shape(J)[0]
-        # JJT = np.linalg.solve(np.dot(J,np.transpose(J)), np.identity(nrow))
-        # bk = x[p.p.n:p.p.n+p.p.m] + v[p.p.n:p.p.n+p.p.m]
-        # term = np.dot(JJT, (1/alpha)*bk + np.dot(J, g)) + (1/alpha)*bk
-        # lambda_lb = np.linalg.norm(term, ord=1)
-        # lambda_lb = 0
-        # ustatus = 12
+            v = solver.solve_tr_bound(self, x, alpha)
         
         '''
         --------------------------------------------------
@@ -138,23 +93,10 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
             - Gurobi
         --------------------------------------------------
         '''
-        start_u = time.process_time()
-        if tangential_step_strategy == "ADMM":
-            list_uy = algo.admm(x, v, alpha)
-        elif tangential_step_strategy == "Gurobi":
-            list_uy = algo.qp_gurobi(x, v, alpha, r.penalty, J)
-        time_u = time.process_time() - start_u
-
-        # Obtain normal component and corresponding dual variable
+        list_uy = solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
         u = list_uy[0]
         y = list_uy[1]
         ustatus = list_uy[2]
-        
-        # Gurobi numerical difficulty, then resolve the problem
-        # while ustatus == 12:
-        #     list_uy = algo.qp_gurobi(x, v, alpha, r.penalty, J)
-        #     alpha = alpha*(1/xi)
-        #     ustatus = list_uy[2]
 
         # Compute search direction
         s = u + v
@@ -168,25 +110,6 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         #   - Infeasible stationary point (can be found elsewhere)
         ----------------------------------------------------------
         '''
-        # compute the KKT measure
-        # KKT = np.zeros(dim)
-        # print(J.shape)
-        # x_mid = x + s
-        # for i in range(dim):
-        #     if i < p.p.n:
-        #         KKT[i] = g[i] - np.dot(np.transpose(J),y[0:p.p.m])[i]
-        #     else:
-        #         if x_mid[i] == 0:
-        #             KKT[i] = max(abs(g[i] - np.dot(np.transpose(J),y[0:p.p.m])[i]+10), abs(g[i] - np.dot(np.transpose(J),y[0:p.p.m])[i]-10))
-        #         elif x_mid[i] > 0:
-        #             KKT[i] = g[i] - np.dot(np.transpose(J),y[0:p.p.m])[i]+10
-        #         elif x_mid[i] < 0:
-        #             KKT[i] = g[i] - np.dot(np.transpose(J),y[0:p.p.m])[i]-10
-        
-        # KKTnorm = np.linalg.norm(KKT, ord=2)
-        # print(KKT)
-        # np.linalg.norm(u, ord=2)/alpha <= tol
-
         if ustatus == 5 or ustatus == 12:
             status = 3
             break
@@ -207,30 +130,15 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         # Update each iterate and proximal parameter
         if Phi(x + s) - Phi(x) <= -eta*Delta_qk:
             x = x + s
-            # alpha = alpha/xi
-            ls_judge= 1
             # alpha = alpha
         else:
             # x = x
             alpha = xi*alpha
-            ls_judge= 0
-
-        # Eval counter 
-        num_feval += 2
-        num_ceval += 2
         
         # Increase the iter and compute constraint function value along with its Jacobian
         iteration += 1  
         g = p.obj(x, gradient=True)[1]
         c, J = p.cons(x, gradient=True)
-
-        # Eval counter 
-        if ls_judge == 1:
-            num_geval += 1
-            num_ceval += 1
-            num_Jeval += 1
-
-        elapsed_time += time.process_time() - start
 
         # Printout information
         fval = p.obj(x)
@@ -288,3 +196,19 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
     info["elapsed_time"] = elapsed_time
 
     return info
+
+
+
+
+
+
+
+
+
+
+# start_u = time.process_time()
+# if tangential_step_strategy == "ADMM":
+#     list_uy = algo.admm(x, v, alpha)
+# elif tangential_step_strategy == "Gurobi":
+#     list_uy = solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
+# time_u = time.process_time() - start_u

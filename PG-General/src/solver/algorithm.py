@@ -16,7 +16,7 @@ class PG_General:
         self.p = p
         self.r = r
         self.params = params
-        self.proj = ProjectionOperator(set_type='nonnegative', params["set_type"])
+        self.proj = ProjectionOperator(set_type=params["set_type"])
     
     
     def solve_tr_bound(self, xk, alpha_k):
@@ -90,7 +90,7 @@ class PG_General:
             raise ValueError("Gurobi did not find an optimal solution.")
     
     
-    def solve_qp_subproblem_super_admm(gk, vk, xk, alpha_k, Jk):
+    def solve_qp_subproblem_alternative(gk, vk, xk, alpha_k, Jk):
         # more general solver
         pass
     
