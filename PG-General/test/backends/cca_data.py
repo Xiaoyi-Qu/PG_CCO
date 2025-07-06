@@ -48,7 +48,7 @@ def DataSCCA(nx, ny, N):
         'Qyy': Y @ Y.T,
         'nx': nx,
         'ny': ny,
-        'x0': np.stack((a,b))
+        'x0': np.concatenate((a,b),axis=0)
     }
 
     print('Done with canonical correlation analysis data generation!!!')

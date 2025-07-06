@@ -5,7 +5,7 @@ Computes the L1 regularizer for selected indices of a decision variable vector.
 import numpy as np
 
 class L1:
-    def __init__(self, indices=[], penalty=None):
+    def __init__(self, indices=None, penalty=None):
         """
         Initialize the L1 regularizer.
 
