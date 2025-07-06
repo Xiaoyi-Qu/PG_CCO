@@ -17,9 +17,35 @@ sys.path.append("../")
 sys.path.append("../..")
 from src.solver.algorithm import PG_General
 
+def projected_steepest_descent_direction(x, grad_f, lower_bounds, upper_bounds):
+    """
+    Compute the projected steepest descent direction for bound constraints.
 
-def solve(p, r, x, alpha, params, normal_step_strategy,
-            tangential_step_strategy):
+    Parameters:
+    - x: np.ndarray, current point (n,)
+    - grad_f: np.ndarray, gradient of the objective at x (n,)
+    - lower_bounds: np.ndarray, lower bounds (n,)
+    - upper_bounds: np.ndarray, upper bounds (n,)
+
+    Returns:
+    - direction: np.ndarray, projected steepest descent direction (n,)
+    """
+    direction = -grad_f.copy()
+
+    # At lower bounds and gradient wants to increase → set direction to 0
+    mask_lower_blocked = (x <= lower_bounds) & (grad_f > 0)
+    
+    # At upper bounds and gradient wants to decrease → set direction to 0
+    mask_upper_blocked = (x >= upper_bounds) & (grad_f < 0)
+    
+    # Zero-out blocked components
+    direction[mask_lower_blocked | mask_upper_blocked] = 0.0
+
+    return direction
+
+
+
+def solve(p, r, x, alpha, params):
     '''
     Arguments:
         p: problem instance object
@@ -29,39 +55,14 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         params: a list that stores parameters
     '''
 
-    # Create dummy variables
-    status = -1
-    vstatus = "None"
-    ustatus = -1
-    iteration = 0
-    iter_identify = 0
-    s = np.zeros(len(x))
-    judge = "No"
-    ls_judge = -1
-    elapsed_time = 0
-
     info = {}
-    g = p.obj(x, gradient=True)[1] 
-    c, J = p.cons(x, gradient=True)
-    dim = len(x)
-    maxit = params["max_iter"]
     tol_stationarity = params["tol_stationarity"]
     tol_feasibility = params["tol_feasibility"]
-    # eta = params["eta"]
-    # xi  = params["xi"]
-    # printevery = params["printevery"]
-    # outID = params["filename"] + "_tau_" + str(params["tau"]) + "_lambda_" + str(r.penalty)
     solver = PG_General(p, r, params)
 
-    # Eval counter
-    # num_geval += 1
-    # num_ceval += 1
-    # num_Jeval += 1
-
     # Print the problem information
-    helper.print_prob(x,p,r,outID)
+    # helper.print_prob(x,p,r,outID)
 
-    # Algorithm starts
     while True:
         start = time.process_time()
         
@@ -75,7 +76,6 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         # Obtain normal direction vk by solving a trust region subproblem
         -----------------------------------------------------------------
         '''
-        start_v = time.process_time()
         if np.linalg.norm(np.dot(np.transpose(J),c), ord=2) <= 1e-12 and np.linalg.norm(c, ord=2) >= 1e-2:
             status = 2
             print("Infeasible stationary point!")
@@ -83,14 +83,14 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         elif np.linalg.norm(np.dot(np.transpose(J),c), ord=2) <= 1e-12:
             v = np.zeros(dim)
         else:
-            v = solver.solve_tr_bound(self, x, alpha)
+            v = solver.solve_tr_bound(x, alpha)
         
         '''
         --------------------------------------------------
         # Compute normal component uk.
         # Solve the tangential subproblem with two options.
-            - ADMM
             - Gurobi
+            - HAP-QP (TBA)
         --------------------------------------------------
         '''
         list_uy = solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
@@ -98,7 +98,6 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         y = list_uy[1]
         ustatus = list_uy[2]
 
-        # Compute search direction
         s = u + v
 
         '''
@@ -113,7 +112,7 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         if ustatus == 5 or ustatus == 12:
             status = 3
             break
-        elif np.linalg.norm(u, ord=2)/alpha <= tol_stationarity and np.linalg.norm(c, ord=2)<= tol_feasibility:
+        elif np.linalg.norm(s, ord=2)/alpha <= tol_stationarity and np.linalg.norm(c, ord=2)<= tol_feasibility:
             status = 0
             break
         elif iteration >= maxit:
@@ -149,51 +148,19 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
         normu = np.linalg.norm(u, ord = 2)
         norms = np.linalg.norm(s, ord = 2)
         normc = np.linalg.norm(p.cons(x), ord = 2)
-        KKTnorm = np.linalg.norm(u, ord = 2)/alpha
+        KKTnorm = np.linalg.norm(s, ord = 2)/alpha
         tau   = algo.params["tau"]
         sparsity = len(np.where(x == 0)[0])
         meritf = Phi(x)
-        lagrange_multiplier = np.linalg.norm(y, ord = inf) # change 2-norm to inf-norm
-        rank = matrix_rank(J)
-        JTc   = np.dot(np.transpose(J),c)
-        # condJ = np.linalg.cond(J)
-        condJ = np.linalg.svd(J)[1][-1]
-        normJTc = np.linalg.norm(JTc, ord = 2)
-        Lipschtiz_const = 0
-        # Identify the first iteration where the sparsity is identified
-        if np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=2) == 0 and iter_identify == 0:
-            iter_identify = iteration
 
         # Print each line
         helper.print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
-                               tau, Lipschtiz_const, meritf, Delta_qk, condJ, normJTc, rank, sparsity,
-                               lagrange_multiplier, ustatus, vstatus, time_v, time_u, outID)
-    
-    # Identify if the sparsity is induced
-    if np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=2) == 0 and (status == 0 or status == 1):
-        judge = "Yes"
+                               tau, meritf, outID)
 
     # Output information 
     info["x"] = x
     info["fval"] = p.obj(x)
     info["objective"] = p.obj(x) + r.obj(x)
-    info["constraint_violation"] = np.linalg.norm(p.cons(x), ord = 2)
-    info["num_zero"] = sparsity
-    info["first_iter_sparsity_idnetified"] = iter_identify
-    info["sparsity_existence"] = judge
-    info["inf_norm_y"] = 0
-    info["prox_param"] = alpha
-    # info["chi_criteria"] = KKTnorm
-    info["chi_criteria"] = max(np.linalg.norm(u, ord = 2)/alpha, np.linalg.norm(c, ord = 2))
-    info["inf_norm_y"] = np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=inf)
-    info["status"] = status
-    info["ustatus"] = ustatus
-    info["iteration"] = iteration
-    info["func_eval"] = num_feval
-    info["grad_eval"] = num_geval
-    info["cons_eval"] = num_ceval
-    info["jacb_eval"] = num_Jeval
-    info["elapsed_time"] = elapsed_time
 
     return info
 
@@ -204,7 +171,23 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
 
 
 
-
+# info["constraint_violation"] = np.linalg.norm(p.cons(x), ord = 2)
+# info["num_zero"] = sparsity
+# info["first_iter_sparsity_idnetified"] = iter_identify
+# info["sparsity_existence"] = judge
+# info["inf_norm_y"] = 0
+# info["prox_param"] = alpha
+# # info["chi_criteria"] = KKTnorm
+# info["chi_criteria"] = max(np.linalg.norm(u, ord = 2)/alpha, np.linalg.norm(c, ord = 2))
+# info["inf_norm_y"] = np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=inf)
+# info["status"] = status
+# info["ustatus"] = ustatus
+# info["iteration"] = iteration
+# info["func_eval"] = num_feval
+# info["grad_eval"] = num_geval
+# info["cons_eval"] = num_ceval
+# info["jacb_eval"] = num_Jeval
+# info["elapsed_time"] = elapsed_time
 
 # start_u = time.process_time()
 # if tangential_step_strategy == "ADMM":
@@ -212,3 +195,14 @@ def solve(p, r, x, alpha, params, normal_step_strategy,
 # elif tangential_step_strategy == "Gurobi":
 #     list_uy = solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
 # time_u = time.process_time() - start_u
+
+# lagrange_multiplier = np.linalg.norm(y, ord = inf) # change 2-norm to inf-norm
+# rank = matrix_rank(J)
+# JTc   = np.dot(np.transpose(J),c)
+# # condJ = np.linalg.cond(J)
+# condJ = np.linalg.svd(J)[1][-1]
+# normJTc = np.linalg.norm(JTc, ord = 2)
+# Lipschtiz_const = 0
+# # Identify the first iteration where the sparsity is identified
+# if np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=2) == 0 and iter_identify == 0:
+#     iter_identify = iteration
