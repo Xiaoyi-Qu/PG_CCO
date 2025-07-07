@@ -11,15 +11,13 @@ import gurobipy as gp
 from gurobipy import GRB
 from src.utils.projection import ProjectionOperator
 
-class PG_General:
+class AlgoBase_General:
     def __init__(self, p, r, params):
         self.p = p
         self.r = r
         self.params = params
-        self.proj = ProjectionOperator(set_type=params["set_type"])
     
-    
-    def solve_tr_bound(self, xk, alpha_k):
+    def solve_tr_bound(self, xk, alpha, delta):
         '''
         # compute direction vk
         '''
@@ -28,17 +26,17 @@ class PG_General:
         gamma = self.params["gamma_beta"]
         p = self.p
         c, J = p.cons(xk, gradient=True)
-        grad_mk_0 = Jk @ ck  # ∇mk(0) = Jk @ ck
+        grad_mk_0 = J.T @ c  # ∇mk(0) = Jk.T @ ck
         beta_k = beta_init = 1
 
-        mk = lambda v: 0.5 * np.dot(ck + Jk @ v, ck + Jk @ v)
+        mk = lambda v: 0.5 * np.dot(c + J.T @ v, c + J @ v)
 
         while True:
             x_trial = xk - beta_k * grad_mk_0
             x_proj = self.proj.project(x_trial)  # Projection onto ℝ^n_≥0
             vk_beta = x_proj - xk
 
-            if (np.linalg.norm(vk_beta) <= kappav * alpha_k * delta_k and
+            if (np.linalg.norm(vk_beta) <= kappav * alpha * delta and
                 mk(vk_beta) <= mk(np.zeros_like(xk)) + eta2 * grad_mk_0.T @ vk_beta):
                 break
 

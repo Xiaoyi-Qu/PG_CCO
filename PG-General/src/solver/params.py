@@ -14,12 +14,17 @@ Description:
 from numpy import inf
 params = {}
 
-params["set_type"] = "box"
+params["maxit"] = 100
 params["kappav"] = 1000
 params["eta_beta"] = 1e-4
 params["gamma_beta"] = 0.5
+params["eta_alpha"] = 1e-4
+params['xi_alpha'] = 0.5
+params["tau"] = 1
+
 params["sigmac"] = 0.1
 params["epsilontau"] = 0.1
+
 
 # params["max_iter"] = 1000
 # params["max_iter_admm"] = 1000

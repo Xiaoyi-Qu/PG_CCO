@@ -11,41 +11,13 @@
 
 import sys
 import numpy as np
-import time
-from numpy.linalg import matrix_rank
 sys.path.append("../")
 sys.path.append("../..")
-from src.solver.algorithm import PG_General
+from src.solver.algorithm import AlgoBase_General
+from src.utils.print_helper import print_header, print_iteration
+from src.utils.projection import projected_steepest_descent_direction
 
-def projected_steepest_descent_direction(x, grad_f, lower_bounds, upper_bounds):
-    """
-    Compute the projected steepest descent direction for bound constraints.
-
-    Parameters:
-    - x: np.ndarray, current point (n,)
-    - grad_f: np.ndarray, gradient of the objective at x (n,)
-    - lower_bounds: np.ndarray, lower bounds (n,)
-    - upper_bounds: np.ndarray, upper bounds (n,)
-
-    Returns:
-    - direction: np.ndarray, projected steepest descent direction (n,)
-    """
-    direction = -grad_f.copy()
-
-    # At lower bounds and gradient wants to increase → set direction to 0
-    mask_lower_blocked = (x <= lower_bounds) & (grad_f > 0)
-    
-    # At upper bounds and gradient wants to decrease → set direction to 0
-    mask_upper_blocked = (x >= upper_bounds) & (grad_f < 0)
-    
-    # Zero-out blocked components
-    direction[mask_lower_blocked | mask_upper_blocked] = 0.0
-
-    return direction
-
-
-
-def solve(p, r, x, alpha, params):
+def solve(p, r, set_type, x, alpha, params):
     '''
     Arguments:
         p: problem instance object
@@ -56,19 +28,19 @@ def solve(p, r, x, alpha, params):
     '''
 
     info = {}
+    printevery = 20
+    outID = None
     tol_stationarity = params["tol_stationarity"]
     tol_feasibility = params["tol_feasibility"]
-    solver = PG_General(p, r, params)
+    solver = AlgoBase_General(p, r, params)
 
-    # Print the problem information
+    # Print the problem information TBD
     # helper.print_prob(x,p,r,outID)
 
     while True:
-        start = time.process_time()
-        
         # Print the header every "printevery" lines
         if iteration%printevery == 0:
-            helper.print_header(outID)
+            print_header(outID)
 
         '''
         -----------------------------------------------------------------
@@ -76,12 +48,15 @@ def solve(p, r, x, alpha, params):
         # Obtain normal direction vk by solving a trust region subproblem
         -----------------------------------------------------------------
         '''
-        if np.linalg.norm(np.dot(np.transpose(J),c), ord=2) <= 1e-12 and np.linalg.norm(c, ord=2) >= 1e-2:
+        # c,J g = p.obj(x, gradient=True)[1] 
+        c, J = p.cons(x, gradient=True)
+        delta = projected_steepest_descent_direction(x, J.T@c, set_type)
+        if np.linalg.norm(delta, ord=2) <= 1e-12 and np.linalg.norm(c, ord=2) >= 1e-2:
             status = 2
             print("Infeasible stationary point!")
             break
-        elif np.linalg.norm(np.dot(np.transpose(J),c), ord=2) <= 1e-12:
-            v = np.zeros(dim)
+        elif np.linalg.norm(delta, ord=2) <= 1e-12:
+            v = np.zeros_like(x)
         else:
             v = solver.solve_tr_bound(x, alpha)
         
@@ -90,10 +65,10 @@ def solve(p, r, x, alpha, params):
         # Compute normal component uk.
         # Solve the tangential subproblem with two options.
             - Gurobi
-            - HAP-QP (TBA)
+            - HPR-QP (TBA)
         --------------------------------------------------
         '''
-        list_uy = solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
+        list_uy = solver.solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
         u = list_uy[0]
         y = list_uy[1]
         ustatus = list_uy[2]
@@ -115,24 +90,24 @@ def solve(p, r, x, alpha, params):
         elif np.linalg.norm(s, ord=2)/alpha <= tol_stationarity and np.linalg.norm(c, ord=2)<= tol_feasibility:
             status = 0
             break
-        elif iteration >= maxit:
+        elif iteration >= params["maxit"]:
             status = 1
             break
 
         # Update merit parameter tau
         # Compute second order model of the merit function 
-        Delta_qk = algo.tau_update(x, s, v, alpha, c, J)
+        Delta_qk = solver.tau_update(x, s, v, alpha, c, J)
 
         # Define a merit function handle
-        Phi = lambda z: algo.params["tau"]*(p.obj(z) + r.obj(z)) + np.linalg.norm(p.cons(z),ord=2) 
+        Phi = lambda z: params["tau"]*(p.obj(z) + r.obj(z)) + np.linalg.norm(p.cons(z),ord=2) 
 
         # Update each iterate and proximal parameter
-        if Phi(x + s) - Phi(x) <= -eta*Delta_qk:
+        if Phi(x + s) - Phi(x) <= -params["eta_alpha"]*Delta_qk:
             x = x + s
             # alpha = alpha
         else:
             # x = x
-            alpha = xi*alpha
+            alpha = params['xi']*alpha
         
         # Increase the iter and compute constraint function value along with its Jacobian
         iteration += 1  
@@ -149,20 +124,22 @@ def solve(p, r, x, alpha, params):
         norms = np.linalg.norm(s, ord = 2)
         normc = np.linalg.norm(p.cons(x), ord = 2)
         KKTnorm = np.linalg.norm(s, ord = 2)/alpha
-        tau   = algo.params["tau"]
-        sparsity = len(np.where(x == 0)[0])
+        tau = params["tau"]
         meritf = Phi(x)
+        # sparsity = len(np.where(x == 0)[0])
 
         # Print each line
-        helper.print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
+        print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
                                tau, meritf, outID)
 
     # Output information 
     info["x"] = x
     info["fval"] = p.obj(x)
     info["objective"] = p.obj(x) + r.obj(x)
+    info["status"] = status
 
     return info
+
 
 
 
