@@ -9,7 +9,7 @@ sys.path.append("../..")
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
-from src.utils.projection import ProjectionOperator
+from src.utils.projection import projection
 
 class AlgoBase_General:
     def __init__(self, p, r, params):
@@ -17,7 +17,7 @@ class AlgoBase_General:
         self.r = r
         self.params = params
     
-    def solve_tr_bound(self, xk, alpha, delta):
+    def solve_tr_bound(self, x, alpha, delta, set_type):
         '''
         # compute direction vk
         '''
@@ -25,15 +25,15 @@ class AlgoBase_General:
         eta = self.params["eta_beta"]
         gamma = self.params["gamma_beta"]
         p = self.p
-        c, J = p.cons(xk, gradient=True)
+        c, J = p.cons(x, gradient=True)
         grad_mk_0 = J.T @ c  # ∇mk(0) = Jk.T @ ck
         beta_k = beta_init = 1
 
-        mk = lambda v: 0.5 * np.dot(c + J.T @ v, c + J @ v)
+        mk = lambda v: 0.5 * np.dot(c + J @ v, c + J @ v)
 
         while True:
-            x_trial = xk - beta_k * grad_mk_0
-            x_proj = self.proj.project(x_trial)  # Projection onto ℝ^n_≥0
+            x_trial = x - beta_k * grad_mk_0
+            x_proj = projection(x_trial, set_type)  # Projection onto ℝ^n_≥0
             vk_beta = x_proj - xk
 
             if (np.linalg.norm(vk_beta) <= kappav * alpha * delta and
@@ -45,12 +45,14 @@ class AlgoBase_General:
         return vk_beta, beta_k
 
 
-    def solve_qp_subproblem_gurobi(gk, vk, xk, alpha_k, Jk):
+    def solve_qp_subproblem_gurobi(g, x, v, alpha, set_type):
         '''
         Compute direction uk
         '''
-        n = len(gk)
-        m = Jk.shape[0]
+        g = p.obj(x, gradient=True)
+        _, J = p.cons(x, gradient=True)
+        n = len(g)
+        m = J.shape[0] # SCCA problem
 
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
@@ -58,34 +60,70 @@ class AlgoBase_General:
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
-        p = model.addMVar(n, name="p", lb=0.0)  # positive part
-        q = model.addMVar(n, name="q", lb=0.0)  # negative part
+        p = model.addMVar(m, name="p", lb=0.0)  # positive part
+        q = model.addMVar(m, name="q", lb=0.0)  # negative part
 
-        # Objective: quadratic + linear + L1 as sum(p + q)
-        Q = np.eye(n) / (2 * alpha_k)
-        lin_obj = gk + vk / alpha_k
-        model.setObjective(
-            lin_obj @ u + 0.5 * u @ Q @ u + (p + q).sum(),
-            GRB.MINIMIZE
-        )
+        # Objective
+        model.setObjective(gp.quicksum(g[i]*(u[i]) for i in range(n)) + 
+                           (1/(2*alpha))*gp.quicksum(pow(u[i],2) for i in range(n)) +
+                           penalty*gp.quicksum(p[i] for i in range(m)) + 
+                           penalty*gp.quicksum(q[i] for i in range(m)), GRB.MINIMIZE)
 
         # Equality constraint: Jk u = 0
-        model.addConstr(Jk @ u == 0, name="equality")
+        model.addConstr(J @ u == 0, name="Equality")
 
-        # Define shifted variable: xk + vk + u = p - q
-        shifted = xk + vk
-        model.addConstr(p - q == shifted + u, name="pq_split")
+        # Constraints due to reformulation
+        for i in range(n):
+            model.addConstr(x[i] + v[i] + u[i] == p[i] - q[i], name="Reformulate")
 
-        # Inequality constraint: xk + vk + u >= 0  →  p - q >= 0
-        model.addConstr(p - q >= 0, name="nonneg")
+        # Inequality constraint: xk + vk + u ∈ Ω (elementwise box constraints)
+        for (lower_bounds, upper_bounds), indices in bound_constraints.items():
+            h += len(indices)
+            lower = np.array(lower_bounds)
+            upper = np.array(upper_bounds)
+            for i in indices:
+                if lower[0] != -np.inf or lower[0] != np.inf:
+                    model.addConstr(x[i] + v[i] + u[i] >= lower[0], name=f"lower_bound_{i}")
+                if upper[0] != -np.inf or upper[0] != np.inf:
+                    model.addConstr(x[i] + v[i] + u[i] <= upper[0], name=f"upper_bound_{i}")
 
-        # Solve
+        # Optimize the model
         model.optimize()
+        status = model.status
 
-        if model.status == GRB.OPTIMAL:
-            return u.X
-        else:
-            raise ValueError("Gurobi did not find an optimal solution.")
+        ustore = []
+        pstore = []
+        qstore = []
+        dual = []
+        u = np.zeros(n)
+        y = np.zeros(m+n+h) # incorrect
+        # y = np.zeros(m+m)
+        
+        # print information regarding the model 
+        # model.printQuality()
+
+        # Handle error from Gurobi
+        if status == 12 or status == 5:
+            return [u,y,status]
+        
+        # Obtain primal and dual solution
+        for var in model.getVars():
+            if "u" in var.VarName:
+                ustore.append(var.x)
+            if "p" in var.VarName:
+                pstore.append(var.x)
+            if "q" in var.VarName:
+                qstore.append(var.x)
+        for var in model.getConstrs():
+            dual.append(var.Pi)
+
+        # Store the solution in an array
+        for i in range(n):
+            u[i] = pstore[i] - qstore[i] - x[i] - v[i]
+        for j in range(m+n+2):
+            y[j] = dual[j]
+
+        return [u,y,status]
     
     
     def solve_qp_subproblem_alternative(gk, vk, xk, alpha_k, Jk):
@@ -93,32 +131,37 @@ class AlgoBase_General:
         pass
     
     
-    def update_tau(tau_prev, xk, sk, alpha_k):
+    def update_tau(x, s, alpha, tau_prev):
         """
-        Update rule for the merit parameter tau_k as described in Equation (3.4).
+        Update rule for the merit parameter tau as described in Equation (3.4).
         """
         sigmac = self.params["sigmac"]
         epsilon_tau = self.params["epsilon_tau"]
-        gk = p.obj(x, gradient=True)[1]
-        ck, Jk = p.cons(x, gradient=True)
+        g = self.p.obj(x, gradient=True)[1]
+        c, J = self.p.cons(x, gradient=True)
+        rs = self.r.obj(x+s)
+        rx = self.r.obj(x)
         
-        # Compute A_k
-        Ak = gk @ sk + (0.5 / alpha_k) * np.linalg.norm(sk)**2 + r_new - rk
+        # Compute denominator
+        denominator = g.T @ s + (0.5 * alpha) * np.linalg.norm(s, ord=2)**2 + rs - rx
 
-        # Compute constraint violation change
-        ck_norm = np.linalg.norm(ck)
-        cksk_norm = np.linalg.norm(ck + Jk @ sk)
+        # Compute numerator
+        numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ s, ord=2)
 
-        # Compute tau_k trial
-        if Ak <= 0:
+        # Compute tau_trial
+        if demon <= 0:
             tau_trial = np.inf
         else:
-            tau_trial = (1 - sigma_c) * (ck_norm - cksk_norm) / Ak
+            tau_trial = (1 - sigma_c) * numerator / denominator
 
-        # Update tau_k
+        # Update tau
         if tau_prev <= tau_trial:
-            tau_k = tau_prev
+            tau = tau_prev
         else:
-            tau_k = min((1 - epsilon_tau) * tau_prev, tau_trial)
+            tau = min((1 - epsilon_tau) * tau_prev, tau_trial)
 
-        return tau_k
+        params["tau"] = tau
+        
+        Delta_qk = (params["tau"]/(2 *alpha)) * np.linalg.norm(s, ord=2)**2 + params["sigmac"] * numerator
+        
+        return Delta_qk

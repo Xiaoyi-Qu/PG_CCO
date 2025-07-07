@@ -28,6 +28,7 @@ def solve(p, r, set_type, x, alpha, params):
     '''
 
     info = {}
+    iteration= 0
     printevery = 20
     outID = None
     tol_stationarity = params["tol_stationarity"]
@@ -58,14 +59,14 @@ def solve(p, r, set_type, x, alpha, params):
         elif np.linalg.norm(delta, ord=2) <= 1e-12:
             v = np.zeros_like(x)
         else:
-            v = solver.solve_tr_bound(x, alpha)
+            v = solver.solve_tr_bound(x, alpha, np.linalg.norm(delta, ord=2), set_type)
         
         '''
         --------------------------------------------------
         # Compute normal component uk.
         # Solve the tangential subproblem with two options.
             - Gurobi
-            - HPR-QP (TBA)
+            - HPR-QP https://arxiv.org/html/2507.02470
         --------------------------------------------------
         '''
         list_uy = solver.solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
@@ -95,14 +96,13 @@ def solve(p, r, set_type, x, alpha, params):
             break
 
         # Update merit parameter tau
-        # Compute second order model of the merit function 
-        Delta_qk = solver.tau_update(x, s, v, alpha, c, J)
+        Delta_qk = solver.update_tau(x, s, alpha, params["tau"])
 
         # Define a merit function handle
         Phi = lambda z: params["tau"]*(p.obj(z) + r.obj(z)) + np.linalg.norm(p.cons(z),ord=2) 
 
         # Update each iterate and proximal parameter
-        if Phi(x + s) - Phi(x) <= -params["eta_alpha"]*Delta_qk:
+        if Phi(x + s) - Phi(x) <= -params["eta_alpha"] * Delta_qk:
             x = x + s
             # alpha = alpha
         else:

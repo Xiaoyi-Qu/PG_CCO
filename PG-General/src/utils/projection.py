@@ -35,3 +35,13 @@ def projected_steepest_descent_direction(x, grad_f, bound_constraints=None):
 
     return direction
 
+
+def projection(x, bound_constraints=None):
+    x_proj = np.copy(x)
+    
+    for (lower_bounds, upper_bounds), indices in bound_constraints.items():
+        lower = np.array(lower_bounds)
+        upper = np.array(upper_bounds)
+        x_proj[indices] = np.minimum(np.maximum(x_proj[indices], lower), upper)
+    
+    return x_proj

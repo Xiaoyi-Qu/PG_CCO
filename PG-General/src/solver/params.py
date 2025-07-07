@@ -15,6 +15,8 @@ from numpy import inf
 params = {}
 
 params["maxit"] = 100
+params["tol_stationarity"] = 1e-6
+params["tol_feasibility"] = 1e-6
 params["kappav"] = 1000
 params["eta_beta"] = 1e-4
 params["gamma_beta"] = 0.5
