@@ -11,14 +11,13 @@ sys.path.append("/home/xiq322/PG_CCO/PG-General")
 sys.path.append("/home/xiq322/PG_CCO/PG-General/experiments")
 
 from backends.regularizer import L1
-from backends.cca import CanonicalCorrelation
-from backends.cca_data import DataSCCA
+from backends.cutest import Cutest
 from src.solver.solve import solve
 from src.solver.params import params
 
-def setup_problem(nx=100, ny=100, N=100, reg_param=1):
+def setup_problem(nx=8, ny=8, N=8, reg_param=10):
     # Initialize the CCA problem
-    p = CanonicalCorrelation(DataSCCA(nx, ny, N))
+    p = Cutest()
 
     # Define the regularizer
     dim = len(p.x0)

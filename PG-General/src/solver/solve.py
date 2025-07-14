@@ -105,10 +105,10 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # Update each iterate and proximal parameter
         if Phi(x + s) - Phi(x) <= -params["eta_alpha"] * Delta_qk:
             x = x + s
-            # alpha = alpha
+            alpha = alpha/params['xi_alpha']
         else:
             # x = x
-            alpha = params['xi']*alpha
+            alpha = params['xi_alpha']*alpha
         
         # Increase the iter and compute constraint function value along with its Jacobian
         iteration += 1  

@@ -35,6 +35,3 @@ def print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, n
                                           meritf = meritf)
     with open(filename, "a") as logfile:
         logfile.write(contents)
-
-    
-

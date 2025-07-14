@@ -60,6 +60,12 @@ class AlgoBase_General:
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
         model.setParam('OutputFlag', 0)  # silence Gurobi output
+        
+        # Set parameters
+        model.setParam("Method", 0)
+        # model.setParam("NumericFocus", 3)
+        # model.setParam("ScaleFlag", 2)
+        # model.setParam("DualReductions", 0) # Enable more definitive conclusion when having INF_OR_UNBD status
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
@@ -147,7 +153,7 @@ class AlgoBase_General:
         rx = self.r.obj(x)
         
         # Compute denominator
-        denominator = g.T @ s + (0.5 * alpha) * np.linalg.norm(s, ord=2)**2 + rs - rx
+        denominator = (g.T @ s + (0.5 * alpha) * np.linalg.norm(s, ord=2)**2 + rs - rx).item()
 
         # Compute numerator
         numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ s, ord=2)
