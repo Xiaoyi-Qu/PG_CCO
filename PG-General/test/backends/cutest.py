@@ -67,22 +67,35 @@ class CUTEst:
             c0, J0 = self.p.cons(x_true, gradient=True)
 
             # Extract equality and inequality constraints
-            c_E = c0[self.eq_indices]
-            c_I = c0[self.ineq_indices]
+            if self.me == 0:
+                c_I = c0[self.ineq_indices]
+                J_I = J0[self.ineq_indices, :]
 
-            J_E = J0[self.eq_indices, :]
-            J_I = J0[self.ineq_indices, :]
+                c = c_I - s + a
 
-            c = np.concatenate([
-                c_E,
-                c_I - s
-            ]) + a
+                # Build Jacobian
+                J_x_bot = np.hstack([J_I, -np.eye(self.mi), np.eye(self.mi)])
 
-            # Build Jacobian (Double check this)
-            J_x_top = np.hstack([J_E, np.zeros((self.me, self.mi)), np.eye(self.me)])
-            J_x_bot = np.hstack([J_I, -np.eye(self.mi), np.eye(self.mi)])
+                J = J_x_bot 
+            else:
+                c_E = c0[self.eq_indices]
+                c_I = c0[self.ineq_indices]
 
-            J = np.vstack([J_x_top, J_x_bot])
+                J_E = J0[self.eq_indices, :]
+                J_I = J0[self.ineq_indices, :]
+
+                c = np.concatenate([
+                    c_E,
+                    c_I - s
+                ]) + a
+
+                # Build Jacobian (Double check this)
+                # what is me = 0
+                J_x_top = np.hstack([J_E, np.zeros((self.me, self.mi)), np.eye(self.me)])
+                J_x_bot = np.hstack([J_I, -np.eye(self.mi), np.eye(self.mi)])
+
+                J = np.vstack([J_x_top, J_x_bot])
+                
             return c, J
         else:
             c0 = self.p.cons(x_true)

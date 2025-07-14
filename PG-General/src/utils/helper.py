@@ -8,6 +8,7 @@ Description: Helper functions
 
 import logging
 import os
+import numpy as np
 
 def setup_logger(outID=None):
     log_dir = '/home/xiq322/PG_CCO/PG-General/test/experiments/log'
