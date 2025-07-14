@@ -20,27 +20,51 @@ from backends.cutest import Cutest
 from src.solver.solve import solve
 from src.solver.params import params
 
-def setup_problem(nx=8, ny=8, N=8, reg_param=10):
-    # Initialize the CCA problem
+def setup_problem(reg_param=10, alpha=10):
+    """
+    Set up the CUTEst constrained optimization problem with slack and auxiliary variables.
+
+    Returns:
+        p: CUTEst problem instance
+        r: Regularizer applied to auxiliary variables
+        bounds: Tuple of (lower_bounds, upper_bounds)
+        x0: Initial guess for [x; s; a]
+        alpha: Penalty parameter
+    """
     p = Cutest()
 
-    # Define the regularizer
-    dim = len(p.x0)
-    r = L1(penalty=reg_param, indices=list(range(dim)))
+    # Number of variables and constraints
+    n = p.n                 # Decision variables
+    me = p.me               # Equality constraints
+    mi = p.mi               # Inequality constraints
+    m = me + mi             # Total constraints
 
-    # Define bounds for each block
-    n_total = nx + ny
-    lower_bounds = [-np.inf] * (n_total + 2)
-    upper_bounds = [np.inf] * n_total + [1.0, 1.0]
+    # Variable dimensions
+    dim_x = n
+    dim_s = mi              # Slack variables only for inequalities
+    dim_a = m               # Auxiliary variables for all constraints
 
-    set_type = (lower_bounds, upper_bounds)
+    # Initial values
+    x0 = p.x0
+    s0 = np.zeros(dim_s)
+    a0 = np.zeros(dim_a)
 
-    # Initial solution with slack
-    slack = np.array([0, 0]).reshape(2,1)
-    x = np.concatenate((p.x0, slack), axis=0)
+    x_init = np.concatenate([x0, s0, a0])  # Full initial vector
 
-    alpha = 10
-    return p, r, set_type, x, alpha
+    # Regularizer on auxiliary variable a (last m entries)
+    r = L1(penalty=reg_param, indices=list(range(n + mi, n + mi + m)))
+
+    # Bounds
+    bl = p.p.bl if hasattr(p.p, 'bl') else [-np.inf] * n
+    bu = p.p.bu if hasattr(p.p, 'bu') else [np.inf] * n
+    cl = p.p.cl[p.ineq_indices] if mi > 0 else []
+    cu = p.p.cu[p.ineq_indices] if mi > 0 else []
+
+    lower_bounds = np.concatenate([bl, cl, [-np.inf] * m])
+    upper_bounds = np.concatenate([bu, cu, [np.inf] * m])
+    bounds = (lower_bounds, upper_bounds)
+
+    return p, r, bounds, x_init, alpha
 
 def main():
     # Set up the problem

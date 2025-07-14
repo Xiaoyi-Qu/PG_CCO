@@ -6,6 +6,7 @@ import argparse
 import csv
 
 # print(os.environ['PYCUTEST_CACHE'])
+# equality constraint first
 
 # exit()
 def main(config):
