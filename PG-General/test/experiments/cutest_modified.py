@@ -16,7 +16,7 @@ sys.path.append("/home/xiq322/PG_CCO/PG-General")
 sys.path.append("/home/xiq322/PG_CCO/PG-General/experiments")
 
 from backends.regularizer import L1
-from backends.cutest import Cutest
+from backends.cutest import CUTEst
 from src.solver.solve import solve
 from src.solver.params import params
 
@@ -31,13 +31,14 @@ def setup_problem(reg_param=10, alpha=10):
         x0: Initial guess for [x; s; a]
         alpha: Penalty parameter
     """
-    p = Cutest()
+    prob_name = "HS65"
+    p = CUTEst(prob_name)
 
     # Number of variables and constraints
     n = p.n                 # Decision variables
+    m = p.m                 # Total constraints
     me = p.me               # Equality constraints
     mi = p.mi               # Inequality constraints
-    m = me + mi             # Total constraints
 
     # Variable dimensions
     dim_x = n
@@ -74,7 +75,7 @@ def main():
     info = solve(p, r, set_type, x, alpha, params)
 
     # Output results
-    print(info)
+    # print(info)
 
 if __name__ == "__main__":
     main()

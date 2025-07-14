@@ -32,6 +32,7 @@ class CUTEst:
         self.p = pycutest.import_problem(problem_name)
         self.n = self.p.n
         self.m = self.p.m
+        self.x0 = self.p.x0
 
         # Boolean masks
         self.eq_mask = (self.p.cl == self.p.cu)
@@ -77,7 +78,7 @@ class CUTEst:
                 c_I - s
             ]) + a
 
-            # Build Jacobian
+            # Build Jacobian (Double check this)
             J_x_top = np.hstack([J_E, np.zeros((self.me, self.mi)), np.eye(self.me)])
             J_x_bot = np.hstack([J_I, -np.eye(self.mi), np.eye(self.mi)])
 
