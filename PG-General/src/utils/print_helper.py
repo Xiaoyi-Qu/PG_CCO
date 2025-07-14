@@ -9,9 +9,9 @@ import numpy as np
 
 def print_header(outID):
     if outID is not None:
-        filename = './log/{}.txt'.format(outID)
+        filename = '/home/xiq322/PG_CCO/PG-General/test/experiments/log/{}.txt'.format(outID)
     else:
-        filename = './log/log.txt'
+        filename = '/home/xiq322/PG_CCO/PG-General/test/experiments/log/log.txt'
     column_titles = ' {Iter:^5s} {f:^11s} {fr:^11s} {g:^11s} {x:^11s} {v:^11s} {u:^11s} \
                       {s:^11s} {c:^11s} {alpha:^11s} {KKT:^11s} {tau:^11s} {phi:^11s} \n'.format(Iter='Iter',
                     f='f', fr='f+r', g='g', x='|x|', v='|v|', u='|u|', s = '|s|', c ='|c|', alpha = 'alpha', 

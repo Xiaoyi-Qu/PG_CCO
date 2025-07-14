@@ -17,10 +17,11 @@ class AlgoBase_General:
         self.r = r
         self.params = params
     
-    def solve_tr_bound(self, x, alpha, delta, set_type):
+    def solve_tr_bound(self, x, alpha, delta, bound_constraints=None):
         '''
         # compute direction vk
         '''
+        v = np.zeros_like(x)
         kappav = self.params["kappav"]
         eta = self.params["eta_beta"]
         gamma = self.params["gamma_beta"]
@@ -29,30 +30,32 @@ class AlgoBase_General:
         grad_mk_0 = J.T @ c  # ∇mk(0) = Jk.T @ ck
         beta_k = beta_init = 1
 
-        mk = lambda v: 0.5 * np.dot(c + J @ v, c + J @ v)
+        mk = lambda v: 0.5 * np.linalg.norm(c + J @ v, ord=2)**2 # check this line
 
         while True:
             x_trial = x - beta_k * grad_mk_0
-            x_proj = projection(x_trial, set_type)  # Projection onto ℝ^n_≥0
-            vk_beta = x_proj - xk
+            x_proj = projection(x_trial, bound_constraints=bound_constraints)  # Projection onto ℝ^n_≥0
+            vk_beta = x_proj - x
 
-            if (np.linalg.norm(vk_beta) <= kappav * alpha * delta and
-                mk(vk_beta) <= mk(np.zeros_like(xk)) + eta2 * grad_mk_0.T @ vk_beta):
+            if (np.linalg.norm(vk_beta, ord=2) <= kappav * alpha * delta and
+                mk(vk_beta) <= mk(np.zeros_like(x)) + self.params['eta_alpha'] * grad_mk_0.T @ vk_beta):
+                v = vk_beta
                 break
 
             beta_k *= gamma
 
-        return vk_beta, beta_k
+        return v, beta_k
 
 
-    def solve_qp_subproblem_gurobi(g, x, v, alpha, set_type):
+    def solve_qp_subproblem_gurobi(self, x, v, alpha, J, bound_constraints=None):
         '''
         Compute direction uk
         '''
-        g = p.obj(x, gradient=True)
-        _, J = p.cons(x, gradient=True)
-        n = len(g)
-        m = J.shape[0] # SCCA problem
+        p = self.p
+        r = self.r
+        _, g = p.obj(x, gradient=True)
+        n = len(x)
+        indices = r.indices # SCCA problem
 
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
@@ -60,14 +63,14 @@ class AlgoBase_General:
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
-        p = model.addMVar(m, name="p", lb=0.0)  # positive part
-        q = model.addMVar(m, name="q", lb=0.0)  # negative part
+        p = model.addMVar(n, name="p", lb=0.0)  # positive part
+        q = model.addMVar(n, name="q", lb=0.0)  # negative part
 
         # Objective
         model.setObjective(gp.quicksum(g[i]*(u[i]) for i in range(n)) + 
                            (1/(2*alpha))*gp.quicksum(pow(u[i],2) for i in range(n)) +
-                           penalty*gp.quicksum(p[i] for i in range(m)) + 
-                           penalty*gp.quicksum(q[i] for i in range(m)), GRB.MINIMIZE)
+                           r.penalty*gp.quicksum(p[i] for i in indices) + 
+                           r.penalty*gp.quicksum(q[i] for i in indices), GRB.MINIMIZE)
 
         # Equality constraint: Jk u = 0
         model.addConstr(J @ u == 0, name="Equality")
@@ -77,15 +80,15 @@ class AlgoBase_General:
             model.addConstr(x[i] + v[i] + u[i] == p[i] - q[i], name="Reformulate")
 
         # Inequality constraint: xk + vk + u ∈ Ω (elementwise box constraints)
-        for (lower_bounds, upper_bounds), indices in bound_constraints.items():
-            h += len(indices)
-            lower = np.array(lower_bounds)
-            upper = np.array(upper_bounds)
-            for i in indices:
-                if lower[0] != -np.inf or lower[0] != np.inf:
-                    model.addConstr(x[i] + v[i] + u[i] >= lower[0], name=f"lower_bound_{i}")
-                if upper[0] != -np.inf or upper[0] != np.inf:
-                    model.addConstr(x[i] + v[i] + u[i] <= upper[0], name=f"upper_bound_{i}")
+        if bound_constraints is not None:
+            lower_bounds, upper_bounds = bound_constraints
+            lower = np.asarray(lower_bounds).reshape(-1,1)
+            upper = np.asarray(upper_bounds).reshape(-1,1)
+            for i in range(len(lower)):
+                if lower[i] != -np.inf:
+                    model.addConstr(x[i] + v[i] + u[i] >= lower[i], name=f"lower_bound_{i}")
+                if upper[i] != np.inf:
+                    model.addConstr(x[i] + v[i] + u[i] <= upper[i], name=f"upper_bound_{i}")
 
         # Optimize the model
         model.optimize()
@@ -96,7 +99,7 @@ class AlgoBase_General:
         qstore = []
         dual = []
         u = np.zeros(n)
-        y = np.zeros(m+n+h) # incorrect
+        # y = np.zeros(m+n+h) # incorrect modify this.
         # y = np.zeros(m+m)
         
         # print information regarding the model 
@@ -120,18 +123,19 @@ class AlgoBase_General:
         # Store the solution in an array
         for i in range(n):
             u[i] = pstore[i] - qstore[i] - x[i] - v[i]
-        for j in range(m+n+2):
-            y[j] = dual[j]
+        # for j in range(m+n+2):
+        #     y[j] = dual[j]
+        y = np.asarray(dual)
 
         return [u,y,status]
     
     
-    def solve_qp_subproblem_alternative(gk, vk, xk, alpha_k, Jk):
+    def solve_qp_subproblem_alternative(self, gk, vk, xk, alpha_k, Jk):
         # more general solver
         pass
     
     
-    def update_tau(x, s, alpha, tau_prev):
+    def update_tau(self, x, s, alpha, tau_prev):
         """
         Update rule for the merit parameter tau as described in Equation (3.4).
         """
@@ -149,10 +153,10 @@ class AlgoBase_General:
         numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ s, ord=2)
 
         # Compute tau_trial
-        if demon <= 0:
+        if denominator <= 0:
             tau_trial = np.inf
         else:
-            tau_trial = (1 - sigma_c) * numerator / denominator
+            tau_trial = (1 - sigmac) * numerator / denominator
 
         # Update tau
         if tau_prev <= tau_trial:
@@ -160,8 +164,8 @@ class AlgoBase_General:
         else:
             tau = min((1 - epsilon_tau) * tau_prev, tau_trial)
 
-        params["tau"] = tau
+        self.params["tau"] = tau
         
-        Delta_qk = (params["tau"]/(2 *alpha)) * np.linalg.norm(s, ord=2)**2 + params["sigmac"] * numerator
+        Delta_qk = (self.params["tau"]/(2 *alpha)) * np.linalg.norm(s, ord=2)**2 + self.params["sigmac"] * numerator
         
         return Delta_qk

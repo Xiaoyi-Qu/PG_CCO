@@ -17,7 +17,7 @@ from src.solver.algorithm import AlgoBase_General
 from src.utils.print_helper import print_header, print_iteration
 from src.utils.projection import projected_steepest_descent_direction
 
-def solve(p, r, set_type, x, alpha, params):
+def solve(p, r, bound_constraints, x, alpha, params):
     '''
     Arguments:
         p: problem instance object
@@ -51,7 +51,7 @@ def solve(p, r, set_type, x, alpha, params):
         '''
         # c,J g = p.obj(x, gradient=True)[1] 
         c, J = p.cons(x, gradient=True)
-        delta = projected_steepest_descent_direction(x, J.T@c, set_type)
+        delta = projected_steepest_descent_direction(x, J.T@c, bound_constraints=bound_constraints)
         if np.linalg.norm(delta, ord=2) <= 1e-12 and np.linalg.norm(c, ord=2) >= 1e-2:
             status = 2
             print("Infeasible stationary point!")
@@ -59,7 +59,8 @@ def solve(p, r, set_type, x, alpha, params):
         elif np.linalg.norm(delta, ord=2) <= 1e-12:
             v = np.zeros_like(x)
         else:
-            v = solver.solve_tr_bound(x, alpha, np.linalg.norm(delta, ord=2), set_type)
+            v, beta_v = solver.solve_tr_bound(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+            # print(v)
         
         '''
         --------------------------------------------------
@@ -69,12 +70,12 @@ def solve(p, r, set_type, x, alpha, params):
             - HPR-QP https://arxiv.org/html/2507.02470
         --------------------------------------------------
         '''
-        list_uy = solver.solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
+        list_uy = solver.solve_qp_subproblem_gurobi(x, v, alpha, J, bound_constraints=bound_constraints)
         u = list_uy[0]
         y = list_uy[1]
         ustatus = list_uy[2]
 
-        s = u + v
+        s = u.reshape(-1,1) + v
 
         '''
         ---------------------------------------------------------
@@ -129,6 +130,8 @@ def solve(p, r, set_type, x, alpha, params):
         # sparsity = len(np.where(x == 0)[0])
 
         # Print each line
+        # print(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
+        #                        tau, meritf)
         print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
                                tau, meritf, outID)
 

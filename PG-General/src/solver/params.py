@@ -25,7 +25,7 @@ params['xi_alpha'] = 0.5
 params["tau"] = 1
 
 params["sigmac"] = 0.1
-params["epsilontau"] = 0.1
+params["epsilon_tau"] = 0.1
 
 
 # params["max_iter"] = 1000

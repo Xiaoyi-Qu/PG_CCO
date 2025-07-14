@@ -38,9 +38,9 @@ def DataSCCA(nx, ny, N):
     Y = (v2 + np.random.normal(0, 0.1, (ny, 1))) @ u.T  # shape: (ny, N)
 
     # Canonical Correlation Analysis (Starting point)
-    cca = CCA(n_components=1)
-    cca.fit(X.T, Y.T)
-    a, b = cca.transform(X, Y) # canonical vectors
+    # cca = CCA(n_components=1)
+    # cca.fit(X.T, Y.T)
+    # a, b = cca.transform(X, Y) # canonical vectors
 
     data = {
         'Qxy': X @ Y.T,
@@ -48,7 +48,7 @@ def DataSCCA(nx, ny, N):
         'Qyy': Y @ Y.T,
         'nx': nx,
         'ny': ny,
-        'x0': np.concatenate((a,b),axis=0)
+        'x0': np.concatenate((np.zeros((nx,1))+0.5,np.zeros((nx,1))+0.5),axis=0)
     }
 
     print('Done with canonical correlation analysis data generation!!!')
