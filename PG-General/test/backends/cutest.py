@@ -1,8 +1,9 @@
 '''
-# File: problem.py
-# Project: First order method for CCO
-# Description: The code is to obtain information of the newly formulated problem.
-# ----------	---	----------------------------------------------------------
+File: cca_data.py
+Author: Xiaoyi Qu
+File Created: 2025-07-14 00:54
+--------------------------------------------
+- CUTEst test problem   
 '''
 
 import numpy as np

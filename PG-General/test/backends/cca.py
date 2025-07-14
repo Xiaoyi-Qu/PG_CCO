@@ -1,5 +1,9 @@
 '''
-# Canonical correlation analysis problem
+File: cca_data.py
+Author: Xiaoyi Qu
+File Created: 2025-07-14 00:54
+--------------------------------------------
+- Canonical correlation analysis problem
 '''     
 
 import numpy as np

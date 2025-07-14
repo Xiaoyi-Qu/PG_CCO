@@ -1,5 +1,10 @@
 """
-Sparse Canonical Correlation Analysis (SCCA) Problem
+File: cutest_modified.py
+Author: Xiaoyi Qu
+File Created: 2025-07-14 00:54
+--------------------------------------------
+Test problem 1:
+    CUTEst variant test problem
 """
 
 import argparse

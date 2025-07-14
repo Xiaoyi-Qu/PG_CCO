@@ -1,7 +1,8 @@
 '''
 # File: solve.py
-# Project: First order method for CCO
-# Description: The code is to implement the algorithm.
+# Author: Xiaoyi Qu(xiq322@lehigh.edu)
+# File Created: 2025-07-14 00:53
+# Description: Algorithm implementation.
 #              status: (1) 0: optimal.
 #                      (2) 1: reach the maximum iteration.
 #                      (3) 2: infeasible stationary point.
@@ -14,8 +15,39 @@ import numpy as np
 sys.path.append("../")
 sys.path.append("../..")
 from src.solver.algorithm import AlgoBase_General
-from src.utils.print_helper import print_header, print_iteration
-from src.utils.projection import projected_steepest_descent_direction
+from src.utils.helper import setup_logger, print_header, print_iteration, projected_steepest_descent_direction
+
+
+def log_final_results(info, outID=None):
+    logger = setup_logger(outID)
+    lines = []
+
+    # Add status messages
+    if info["ustatus"] == 5:
+        lines.append("Model was proven to be unbounded.")
+    elif info["ustatus"] == 12:
+        lines.append("Optimization was terminated due to unrecoverable numerical difficulties.")
+
+    lines.append("******************************************************************************")
+    lines.append("Final Results")
+    lines.append("Objective value (f):.....................................................%8.6e" % info["fval"])
+    lines.append("Objective value (f+r):...................................................%8.6e" % info["objective"])
+
+    # Optional: Uncomment as needed
+    # lines.append("Relative error:.......................................................%8.8e" % relative_error)
+    # lines.append("Proximal parameter:....................................................%8.6e" % info["prox_param"])
+    # lines.append("Chi_criteria:................................................%s" % str(info["chi_criteria"]))
+    # lines.append("Status:.................................................................%1d" % info["status"])
+    # lines.append("Elapsed time:..........................................................%8.6es" % info["elapsed_time"])
+
+    lines.append("x = " + str(np.array(info['x'])))
+
+    # Write all lines to logger
+    for line in lines:
+        logger.info(line)
+
+    return None
+
 
 def solve(p, r, bound_constraints, x, alpha, params):
     '''
@@ -105,7 +137,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # Update each iterate and proximal parameter
         if Phi(x + s) - Phi(x) <= -params["eta_alpha"] * Delta_qk:
             x = x + s
-            alpha = alpha/params['xi_alpha']
+            alpha = min(alpha/params['xi_alpha'], 10)
         else:
             # x = x
             alpha = params['xi_alpha']*alpha
@@ -140,6 +172,9 @@ def solve(p, r, bound_constraints, x, alpha, params):
     info["fval"] = p.obj(x)
     info["objective"] = p.obj(x) + r.obj(x)
     info["status"] = status
+    info["ustatus"] = ustatus
+    
+    log_final_results(info, outID=None)
 
     return info
 

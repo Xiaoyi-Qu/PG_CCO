@@ -1,5 +1,9 @@
 '''
-Main algorithm
+File: algorithm.py
+Author: Xiaoyi Qu(xiq322@lehigh.edu)
+File Created: 2025-07-14 00:41
+--------------------------------------------
+- A collection of subcomponents of the proposed algorithm
 '''
 
 import sys
@@ -9,7 +13,7 @@ sys.path.append("../..")
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
-from src.utils.projection import projection
+from src.utils.helper import projection
 
 class AlgoBase_General:
     def __init__(self, p, r, params):
@@ -19,7 +23,7 @@ class AlgoBase_General:
     
     def solve_tr_bound(self, x, alpha, delta, bound_constraints=None):
         '''
-        # compute direction vk
+        - compute direction vk
         '''
         v = np.zeros_like(x)
         kappav = self.params["kappav"]
@@ -27,14 +31,14 @@ class AlgoBase_General:
         gamma = self.params["gamma_beta"]
         p = self.p
         c, J = p.cons(x, gradient=True)
-        grad_mk_0 = J.T @ c  # ∇mk(0) = Jk.T @ ck
+        grad_mk_0 = J.T @ c
         beta_k = beta_init = 1
 
-        mk = lambda v: 0.5 * np.linalg.norm(c + J @ v, ord=2)**2 # check this line
+        mk = lambda v: 0.5 * np.linalg.norm(c + J @ v, ord=2)**2
 
         while True:
             x_trial = x - beta_k * grad_mk_0
-            x_proj = projection(x_trial, bound_constraints=bound_constraints)  # Projection onto ℝ^n_≥0
+            x_proj = projection(x_trial, bound_constraints=bound_constraints)
             vk_beta = x_proj - x
 
             if (np.linalg.norm(vk_beta, ord=2) <= kappav * alpha * delta and
@@ -59,13 +63,13 @@ class AlgoBase_General:
 
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
-        model.setParam('OutputFlag', 0)  # silence Gurobi output
+        # model.setParam('OutputFlag', 0)  # silence Gurobi output
         
         # Set parameters
         model.setParam("Method", 0)
         # model.setParam("NumericFocus", 3)
         # model.setParam("ScaleFlag", 2)
-        # model.setParam("DualReductions", 0) # Enable more definitive conclusion when having INF_OR_UNBD status
+        model.setParam("DualReductions", 0) # Enable more definitive conclusion when having INF_OR_UNBD status
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
@@ -137,7 +141,9 @@ class AlgoBase_General:
     
     
     def solve_qp_subproblem_alternative(self, gk, vk, xk, alpha_k, Jk):
-        # more general solver
+        # More general solver
+        # For instance, a recently developed solver called HPR-QP
+        # https://arxiv.org/pdf/2507.02470
         pass
     
     

@@ -1,5 +1,10 @@
 """
-Sparse Canonical Correlation Analysis (SCCA) Problem
+File: scca.py
+Author: Xiaoyi Qu
+File Created: 2025-07-14 00:54
+--------------------------------------------
+Test problem 2:
+    Sparse Canonical Correlation Analysis (SCCA) Problem
 """
 
 import argparse
@@ -16,7 +21,7 @@ from backends.cca_data import DataSCCA
 from src.solver.solve import solve
 from src.solver.params import params
 
-def setup_problem(nx=100, ny=100, N=100, reg_param=1):
+def setup_problem(nx=40, ny=40, N=40, reg_param=0.005):
     # Initialize the CCA problem
     p = CanonicalCorrelation(DataSCCA(nx, ny, N))
 
@@ -46,7 +51,7 @@ def main():
     info = solve(p, r, set_type, x, alpha, params)
 
     # Output results
-    print(info)
+    # print(info)
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,9 @@
 """
-Computes the L1 regularizer for selected indices of a decision variable vector.
+File: cca_data.py
+Author: Xiaoyi Qu
+File Created: 2025-07-14 00:54
+--------------------------------------------
+- Computes the L1 regularizer for selected indices of a decision variable vector.
 """
 
 import numpy as np

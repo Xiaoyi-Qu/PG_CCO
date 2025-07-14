@@ -1,7 +1,11 @@
 """
+File: cca_data.py
+Author: Xiaoyi Qu
+File Created: 2025-07-14 00:54
+--------------------------------------------
 Generate synthetic data for canonical correlation analysis problem
 
-    max_{w_x ∈ ℝⁿˣ, w_y ∈ ℝⁿʸ}  ⟨w_x, Σ_xy w_y⟩ + λ (‖w_x‖₁ + ‖w_y‖₁)
+    min_{w_x ∈ ℝⁿˣ, w_y ∈ ℝⁿʸ}  -⟨w_x, Σ_xy w_y⟩ + λ (‖w_x‖₁ + ‖w_y‖₁)
                    subject to:   ⟨w_x, Σ_xx w_x⟩ ≤ 1
                                  ⟨w_y, Σ_yy w_y⟩ ≤ 1
 
@@ -37,18 +41,13 @@ def DataSCCA(nx, ny, N):
     X = (v1 + np.random.normal(0, 0.1, (nx, 1))) @ u.T  # shape: (nx, N)
     Y = (v2 + np.random.normal(0, 0.1, (ny, 1))) @ u.T  # shape: (ny, N)
 
-    # Canonical Correlation Analysis (Starting point)
-    # cca = CCA(n_components=1)
-    # cca.fit(X.T, Y.T)
-    # a, b = cca.transform(X, Y) # canonical vectors
-
     data = {
         'Qxy': X @ Y.T,
         'Qxx': X @ X.T,
         'Qyy': Y @ Y.T,
         'nx': nx,
         'ny': ny,
-        'x0': np.concatenate((np.zeros((nx,1))+0.5,np.zeros((nx,1))+0.5),axis=0)
+        'x0': np.concatenate((np.zeros((nx,1))+0.1,np.zeros((nx,1))+0.1),axis=0)
     }
 
     print('Done with canonical correlation analysis data generation!!!')
