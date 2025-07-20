@@ -40,6 +40,10 @@ class AlgoBase_General:
             x_trial = x - beta_k * grad_mk_0
             x_proj = projection(x_trial, bound_constraints=bound_constraints)
             vk_beta = x_proj - x
+            
+            # print(kappav * alpha * delta, grad_mk_0.T @ vk_beta)
+            # print(vk_beta, 0)
+            # print(mk(vk_beta), mk(np.zeros_like(x)))
 
             if (np.linalg.norm(vk_beta, ord=2) <= kappav * alpha * delta and
                 mk(vk_beta) <= mk(np.zeros_like(x)) + self.params['eta_alpha'] * grad_mk_0.T @ vk_beta):
@@ -63,7 +67,7 @@ class AlgoBase_General:
 
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
-        # model.setParam('OutputFlag', 0)  # silence Gurobi output
+        model.setParam('OutputFlag', 0)  # silence Gurobi output
         
         # Set parameters
         model.setParam("Method", 0)
@@ -92,8 +96,12 @@ class AlgoBase_General:
         # Inequality constraint: xk + vk + u ∈ Ω (elementwise box constraints)
         if bound_constraints is not None:
             lower_bounds, upper_bounds = bound_constraints
-            lower = np.asarray(lower_bounds).reshape(-1,1)
-            upper = np.asarray(upper_bounds).reshape(-1,1)
+            if len(x.shape) == 1:
+                lower = np.asarray(lower_bounds)
+                upper = np.asarray(upper_bounds)
+            else:
+                lower = np.asarray(lower_bounds).reshape(-1,1)
+                upper = np.asarray(upper_bounds).reshape(-1,1)
             for i in range(len(lower)):
                 if lower[i] != -np.inf:
                     model.addConstr(x[i] + v[i] + u[i] >= lower[i], name=f"lower_bound_{i}")
@@ -140,11 +148,11 @@ class AlgoBase_General:
         return [u,y,status]
     
     
-    def solve_qp_subproblem_alternative(self, gk, vk, xk, alpha_k, Jk):
-        # More general solver
-        # For instance, a recently developed solver called HPR-QP
-        # https://arxiv.org/pdf/2507.02470
-        pass
+    # def solve_qp_subproblem_alternative(self, gk, vk, xk, alpha_k, Jk):
+    #     # More general solver
+    #     # For instance, a recently developed solver called HPR-QP
+    #     # https://arxiv.org/pdf/2507.02470
+    #     pass
     
     
     def update_tau(self, x, s, alpha, tau_prev):
@@ -163,7 +171,7 @@ class AlgoBase_General:
 
         # Compute numerator
         numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ s, ord=2)
-
+        
         # Compute tau_trial
         if denominator <= 0:
             tau_trial = np.inf
@@ -178,6 +186,6 @@ class AlgoBase_General:
 
         self.params["tau"] = tau
         
-        Delta_qk = (self.params["tau"]/(2 *alpha)) * np.linalg.norm(s, ord=2)**2 + self.params["sigmac"] * numerator
+        Delta_qk = (self.params["tau"]/(4 *alpha)) * np.linalg.norm(s, ord=2)**2 + self.params["sigmac"] * numerator
         
         return Delta_qk

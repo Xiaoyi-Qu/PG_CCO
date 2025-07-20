@@ -14,7 +14,7 @@ The problem is formulated as:
                 bl ≤ x ≤ bu
 
 where:
-    - c(x, s) = [ c_E(x); c_I(x) - s ]
+    - c(x, s) = [c_E(x); c_I(x) - s ]
       * c_E(x): equality constraints
       * c_I(x): inequality constraints
       * s: slack variable
@@ -23,7 +23,7 @@ Notes:
     - r(a) typically represents a regularization term or additional objective component.
     - The problem includes both bound constraints and general constraints with slack variables.
 """
-        
+
 import numpy as np
 import pycutest
 
@@ -33,6 +33,7 @@ class CUTEst:
         self.n = self.p.n
         self.m = self.p.m
         self.x0 = self.p.x0
+        self.name = self.p.name
 
         # Boolean masks
         self.eq_mask = (self.p.cl == self.p.cu)
@@ -69,7 +70,7 @@ class CUTEst:
             # Extract equality and inequality constraints
             if self.me == 0:
                 c_I = c0[self.ineq_indices]
-                J_I = J0[self.ineq_indices, :]
+                J_I = J0[self.ineq_indices, :] # Double check this.
 
                 c = c_I - s + a
 
@@ -90,9 +91,9 @@ class CUTEst:
                 ]) + a
 
                 # Build Jacobian (Double check this)
-                # what is me = 0
-                J_x_top = np.hstack([J_E, np.zeros((self.me, self.mi)), np.eye(self.me)])
-                J_x_bot = np.hstack([J_I, -np.eye(self.mi), np.eye(self.mi)])
+                # what if me = 0
+                J_x_top = np.hstack([J_E, np.zeros((self.me, self.mi)), np.eye(self.me), np.zeros((self.me, self.mi))])
+                J_x_bot = np.hstack([J_I, -np.eye(self.mi), np.zeros((self.mi, self.me)), np.eye(self.mi)])
 
                 J = np.vstack([J_x_top, J_x_bot])
                 

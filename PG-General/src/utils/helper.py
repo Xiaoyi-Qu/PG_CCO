@@ -29,24 +29,42 @@ def setup_logger(outID=None):
     return logger
 
 
+def print_prob_info(p, r, outID):
+    logger = setup_logger(outID)
+
+    content = "==============================================================================\n"
+    content += "                Proximal Gradient Method    Version: 0.1 (2025-07-20)                \n"
+    content += "==============================================================================\n"
+    content += f"Problem Name:...................................{p.name}\n"
+    content += f"   (1) Number of variables: {p.n}\n   (2) Number of constraints: {p.m}\n"
+    content += f"   (3) Number of equality constraints: {p.me}\n   (4) Number of inequality constraints: {p.mi}\n"
+    content += "Regularizer Type:....................................L1\n"
+    content += "Regularization Parameter:..............................Lambda={r.penalty}\n"
+    content += "******************************************************************************\n"
+    content += "Comments: a. |.| represents 2-norm unless specified. b. y represents the dual variable.\n"
+    content += "******************************************************************************\n"
+
+    logger.info(content)
+
+
 def print_header(outID):
     logger = setup_logger(outID)
     column_titles = ' {Iter:^5s} {f:^11s} {fr:^11s} {g:^11s} {x:^11s} {v:^11s} {u:^11s} ' \
-                    '{s:^11s} {c:^11s} {alpha:^11s} {KKT:^11s} {tau:^11s} {phi:^11s} '.format(
+                    '{s:^11s} {c:^11s} {a:^11s} {delta_qk:^11s} {alpha:^11s} {KKT:^11s} {tau:^11s} {phi:^11s} '.format(
         Iter='Iter', f='f', fr='f+r', g='g', x='|x|', v='|v|', u='|u|',
-        s='|s|', c='|c|', alpha='alpha', KKT='KKT', tau='tau', phi='Merit fval'
+        s='|s|', c='|c|', a='|a|_inf', delta_qk='delta_qk', alpha='alpha', KKT='KKT', tau='tau', phi='Merit fval'
     )
     logger.info(column_titles)
 
 
-def print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
+def print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, delta_qk, alpha, KKTnorm,
                     tau, meritf, outID):
     logger = setup_logger(outID)
     contents = "{it:5d} {fval:8.5e} {frval:8.5e} {normg:8.5e} {normx:8.5e} {normv:8.5e} " \
-               "{normu:8.5e} {norms:8.5e} {normc:8.5e} {alpha:8.5e} {KKT:8.5e} {tau:8.5e} " \
+               "{normu:8.5e} {norms:8.5e} {normc:8.5e} {norma:8.5e} {delta_qk:8.5e} {alpha:8.5e} {KKT:8.5e} {tau:8.5e} " \
                "{meritf:8.5e}".format(
         it=iteration, fval=fval, frval=frval, normg=normg, normx=normx,
-        normv=normv, normu=normu, norms=norms, normc=normc,
+        normv=normv, normu=normu, norms=norms, normc=normc, norma=norma, delta_qk=delta_qk,
         alpha=alpha, KKT=KKTnorm, tau=tau, meritf=meritf
     )
     logger.info(contents)
@@ -74,8 +92,12 @@ def projected_steepest_descent_direction(x, grad_f, bound_constraints=None):
 
     if bound_constraints is not None:
         lower_bounds, upper_bounds = bound_constraints
-        lower_bounds = np.asarray(lower_bounds).reshape(-1,1)
-        upper_bounds = np.asarray(upper_bounds).reshape(-1,1)
+        if len(x.shape) == 1:
+            lower_bounds = np.asarray(lower_bounds)
+            upper_bounds = np.asarray(upper_bounds)
+        else:
+            lower_bounds = np.asarray(lower_bounds).reshape(-1,1)
+            upper_bounds = np.asarray(upper_bounds).reshape(-1,1)
 
         # Identify variables at bounds where descent direction would violate constraints
         at_lower = (x <= lower_bounds) & (grad_f > 0) 
@@ -100,8 +122,12 @@ def projection(x, bound_constraints=None):
 
     if bound_constraints is not None:
         lower_bounds, upper_bounds = bound_constraints
-        lower = np.array(lower_bounds).reshape(-1,1)
-        upper = np.array(upper_bounds).reshape(-1,1)
+        if len(x.shape) == 1:
+            lower = np.asarray(lower_bounds)
+            upper = np.asarray(upper_bounds)
+        else:
+            lower = np.asarray(lower_bounds).reshape(-1,1)
+            upper = np.asarray(upper_bounds).reshape(-1,1)
         x_proj = np.minimum(np.maximum(x_proj, lower), upper)
 
     return x_proj

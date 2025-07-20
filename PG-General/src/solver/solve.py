@@ -15,7 +15,8 @@ import numpy as np
 sys.path.append("../")
 sys.path.append("../..")
 from src.solver.algorithm import AlgoBase_General
-from src.utils.helper import setup_logger, print_header, print_iteration, projected_steepest_descent_direction
+from src.solver.params import params
+from src.utils.helper import setup_logger, print_prob_info, print_header, print_iteration, projected_steepest_descent_direction
 
 
 def log_final_results(info, outID=None):
@@ -30,8 +31,23 @@ def log_final_results(info, outID=None):
 
     lines.append("******************************************************************************")
     lines.append("Final Results")
-    lines.append("Objective value (f):.....................................................%8.6e" % info["fval"])
-    lines.append("Objective value (f+r):...................................................%8.6e" % info["objective"])
+    lines.append(f"Objective value (f):.....................................................{info['fval']}")
+    lines.append(f"Objective value (f+r):...................................................{info['objective']}")
+    lines.append(f"Constraint violation (|c(x)|_2):.........................................{info['constr_violation']}")
+    lines.append(f"Chi measure (|s|/alpha):.................................................{info['chi_measure']}")
+    lines.append(f"Variable a is zero (Y/N):................................................{info['norma'] == 0}")
+    lines.append(f"Variable a is approximate zero (Y/N):....................................{info['norma'] <= params['approximate_a']}")
+    lines.append(f"KKT found (Y/N):.........................................................{info['status'] == 0}")
+
+
+    # Output information 
+    # info["x"] = x
+    # info["fval"] = p.obj(x)
+    # info["objective"] = p.obj(x) + r.obj(x)
+    # info["constr_violation"] = normc
+    # info["a_infty_norm"] = norma
+    # info["status"] = status
+    # info["ustatus"] = ustatus
 
     # Optional: Uncomment as needed
     # lines.append("Relative error:.......................................................%8.8e" % relative_error)
@@ -62,13 +78,13 @@ def solve(p, r, bound_constraints, x, alpha, params):
     info = {}
     iteration= 0
     printevery = 20
-    outID = None
+    outID = p.name
     tol_stationarity = params["tol_stationarity"]
     tol_feasibility = params["tol_feasibility"]
     solver = AlgoBase_General(p, r, params)
 
-    # Print the problem information TBD
-    # helper.print_prob(x,p,r,outID)
+    # Print the problem information
+    print_prob_info(p, r, outID)
 
     while True:
         # Print the header every "printevery" lines
@@ -92,7 +108,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
             v = np.zeros_like(x)
         else:
             v, beta_v = solver.solve_tr_bound(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
-            # print(v)
+            # print(beta_v)
         
         '''
         --------------------------------------------------
@@ -107,7 +123,9 @@ def solve(p, r, bound_constraints, x, alpha, params):
         y = list_uy[1]
         ustatus = list_uy[2]
 
-        s = u.reshape(-1,1) + v
+        # print(f"u value:{u}, v value:{v}")
+        # s = u.reshape(-1,1) + v # scca test uncomment this.
+        s = u + v
 
         '''
         ---------------------------------------------------------
@@ -137,7 +155,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # Update each iterate and proximal parameter
         if Phi(x + s) - Phi(x) <= -params["eta_alpha"] * Delta_qk:
             x = x + s
-            alpha = min(alpha/params['xi_alpha'], 10)
+            alpha = min(alpha/params['xi_alpha'], 1)
         else:
             # x = x
             alpha = params['xi_alpha']*alpha
@@ -156,25 +174,28 @@ def solve(p, r, bound_constraints, x, alpha, params):
         normu = np.linalg.norm(u, ord = 2)
         norms = np.linalg.norm(s, ord = 2)
         normc = np.linalg.norm(p.cons(x), ord = 2)
+        norma = np.linalg.norm(x[-p.m:], ord=np.inf)
+        chi_measure = np.linalg.norm(s, ord = 2)/alpha
+        delta_qk = Delta_qk
         KKTnorm = np.linalg.norm(s, ord = 2)/alpha
         tau = params["tau"]
         meritf = Phi(x)
-        # sparsity = len(np.where(x == 0)[0])
 
         # Print each line
-        # print(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
-        #                        tau, meritf)
-        print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, alpha, KKTnorm,
+        print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, delta_qk, alpha, KKTnorm,
                                tau, meritf, outID)
 
     # Output information 
     info["x"] = x
     info["fval"] = p.obj(x)
     info["objective"] = p.obj(x) + r.obj(x)
+    info["constr_violation"] = normc
+    info["norma"] = norma
+    info["chi_measure"] = chi_measure
     info["status"] = status
     info["ustatus"] = ustatus
     
-    log_final_results(info, outID=None)
+    log_final_results(info, outID=outID)
 
     return info
 

@@ -21,7 +21,7 @@ from backends.cca_data import DataSCCA
 from src.solver.solve import solve
 from src.solver.params import params
 
-def setup_problem(nx=40, ny=40, N=40, reg_param=0.005):
+def setup_problem(nx=40, ny=40, N=40, reg_param=1e-5):
     # Initialize the CCA problem
     p = CanonicalCorrelation(DataSCCA(nx, ny, N))
 
