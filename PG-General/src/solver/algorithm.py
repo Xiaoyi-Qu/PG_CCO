@@ -73,8 +73,8 @@ class AlgoBase_General:
         n = len(x)
         m = p.m
         box_radius = kappav * alpha * delta
-        if box_radius <= 1e-5:
-            box_radius = 1e-5
+        # if box_radius <= 1e-8:
+        #     box_radius = 1e-8
 
         # Create Gurobi model
         model = gp.Model("TR_Bound")
@@ -259,11 +259,22 @@ class AlgoBase_General:
         # Compute numerator
         numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ s, ord=2)
         
+        # if np.linalg.norm(c, ord=2) < 1e-12:
+        #     tauk_trial = math.inf
+        # else:
+        #     if condition > 0: # Be careful, related to KKT residual
+        #         tauk_trial = (1 - sigmac)*(norm_c - norm_cJv)/condition
+        #     else:
+        #         tauk_trial = math.inf
+
         # Compute tau_trial
-        if denominator <= 0:
+        if np.linalg.norm(c, ord=2) < 1e-12:
             tau_trial = np.inf
         else:
-            tau_trial = (1 - sigmac) * numerator / denominator
+            if denominator <= 0:
+                tau_trial = np.inf
+            else:
+                tau_trial = (1 - sigmac) * numerator / denominator
 
         # Update tau
         if tau_prev <= tau_trial:

@@ -187,7 +187,6 @@ def solve(p, r, bound_constraints, x, alpha, params):
         normc = np.linalg.norm(p.cons(x), ord = 2)
         norma = np.linalg.norm(x[-p.m:], ord=np.inf)
         tr_radius = params["kappav"] * alpha * np.linalg.norm(delta, ord=2)
-        chi_measure = np.linalg.norm(s, ord = 2)/alpha
         delta_qk = Delta_qk
         KKTnorm = np.linalg.norm(s, ord = 2)/alpha
         tau = params["tau"]
@@ -204,7 +203,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
     info["objective"] = p.obj(x) + r.obj(x)
     info["constr_violation"] = np.linalg.norm(p.cons(x), ord = 2)
     info["norma"] = norma
-    info["chi_measure"] = chi_measure
+    info["chi_measure"] = np.linalg.norm(s, ord = 2)/alpha
     info["status"] = status
     info["ustatus"] = ustatus
     

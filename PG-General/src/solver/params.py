@@ -7,7 +7,7 @@ File Created: 2025-07-14 00:52
 from numpy import inf
 params = {}
 
-params["maxit"] = 4000
+params["maxit"] = 2000
 params["tol_stationarity"] = 1e-4
 params["tol_feasibility"] = 1e-4
 params["kappav"] = 0.02

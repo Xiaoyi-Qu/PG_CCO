@@ -92,7 +92,7 @@ def get_config():
     parser = argparse.ArgumentParser()
 
     # Add arguments
-    parser.add_argument("-n", "--name", type=str, default="POLAK1", help="Test problem name")
+    parser.add_argument("-n", "--name", type=str, default="STANCMIN", help="Test problem name")
 
     # Parse arguments
     config = parser.parse_args()
