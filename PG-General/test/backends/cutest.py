@@ -107,3 +107,20 @@ class CUTEst:
                 c_I - s
             ]) + a
             return c
+        
+    def cons_noa(self, x):
+        """
+        Evaluate the constraint and optionally its Jacobian
+            c(x, s) + a = [c_E(x); c_I(x) - s] + a = 0
+        """
+        x_true = x[:self.n]
+        s = x[self.n:self.n + self.mi]
+
+        c0 = self.p.cons(x_true)
+        c_E = c0[self.eq_indices]
+        c_I = c0[self.ineq_indices]
+        c = np.concatenate([
+            c_E,
+            c_I - s
+        ])
+        return c

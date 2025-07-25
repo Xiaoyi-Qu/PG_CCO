@@ -41,13 +41,34 @@ def DataSCCA(nx, ny, N):
     X = (v1 + np.random.normal(0, 0.1, (nx, 1))) @ u.T  # shape: (nx, N)
     Y = (v2 + np.random.normal(0, 0.1, (ny, 1))) @ u.T  # shape: (ny, N)
 
+    # Initialize CCA
+    n_components = 1  # number of canonical dimensions to compute
+    cca = CCA(n_components=n_components)
+
+    # Fit CCA
+    cca.fit(X, Y)
+
+    # Project the data
+    X_c, Y_c = cca.transform(X, Y)
+
+    # Canonical vectors (weights)
+    w_x = cca.x_weights_[:, 0]  # shape: (n_features_X,)
+    w_y = cca.y_weights_[:, 0]  # shape: (n_features_Y,)
+
+    # Correlation of projections
+    # corr = np.corrcoef(X_c.T, Y_c.T)[0, 1]
+
+    # print("Canonical correlation:", corr)
+    # print("Canonical vector for X (w_x):", w_x)
+    # print("Canonical vector for Y (w_y):", w_y)
+
     data = {
         'Qxy': X @ Y.T,
         'Qxx': X @ X.T,
         'Qyy': Y @ Y.T,
         'nx': nx,
         'ny': ny,
-        'x0': np.concatenate((np.zeros((nx,1))+0.1,np.zeros((nx,1))+0.1),axis=0)
+        'x0': np.concatenate((w_x.reshape((nx,1))+0.05, w_y.reshape((ny,1))+0.05),axis=0)
     }
 
     print('Done with canonical correlation analysis data generation!!!')

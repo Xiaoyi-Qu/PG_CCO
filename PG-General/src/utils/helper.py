@@ -39,7 +39,7 @@ def print_prob_info(p, r, outID):
     content += f"   (1) Number of variables: {p.n}\n   (2) Number of constraints: {p.m}\n"
     content += f"   (3) Number of equality constraints: {p.me}\n   (4) Number of inequality constraints: {p.mi}\n"
     content += "Regularizer Type:....................................L1\n"
-    content += "Regularization Parameter:..............................Lambda={r.penalty}\n"
+    content += f"Regularization Parameter:..............................Lambda={r.penalty}\n"
     content += "******************************************************************************\n"
     content += "Comments: a. |.| represents 2-norm unless specified. b. y represents the dual variable.\n"
     content += "******************************************************************************\n"
@@ -50,22 +50,22 @@ def print_prob_info(p, r, outID):
 def print_header(outID):
     logger = setup_logger(outID)
     column_titles = ' {Iter:^5s} {f:^11s} {fr:^11s} {g:^11s} {x:^11s} {v:^11s} {u:^11s} ' \
-                    '{s:^11s} {c:^11s} {a:^11s} {delta_qk:^11s} {alpha:^11s} {KKT:^11s} {tau:^11s} {phi:^11s} '.format(
+                    '{s:^11s} {c:^11s} {a:^11s} {tr_radius:^11s} {delta_qk:^11s} {alpha:^11s} {KKT:^11s} {tau:^11s} {phi:^11s} {phis:^11s} '.format(
         Iter='Iter', f='f', fr='f+r', g='g', x='|x|', v='|v|', u='|u|',
-        s='|s|', c='|c|', a='|a|_inf', delta_qk='delta_qk', alpha='alpha', KKT='KKT', tau='tau', phi='Merit fval'
+        s='|s|', c='|c|', a='|a|_inf', delta_qk='delta_qk', alpha='alpha', tr_radius="tr_radius", KKT='KKT', tau='tau', phi='Merit fval', phis='Merit fval s'
     )
     logger.info(column_titles)
 
 
-def print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, delta_qk, alpha, KKTnorm,
-                    tau, meritf, outID):
+def print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, tr_radius, delta_qk, alpha, KKTnorm,
+                    tau, meritf, meritfs, outID):
     logger = setup_logger(outID)
     contents = "{it:5d} {fval:8.5e} {frval:8.5e} {normg:8.5e} {normx:8.5e} {normv:8.5e} " \
-               "{normu:8.5e} {norms:8.5e} {normc:8.5e} {norma:8.5e} {delta_qk:8.5e} {alpha:8.5e} {KKT:8.5e} {tau:8.5e} " \
-               "{meritf:8.5e}".format(
+               "{normu:8.5e} {norms:8.5e} {normc:8.5e} {norma:8.5e} {tr_radius:8.5e} {delta_qk:8.5e} {alpha:8.5e} {KKT:8.5e} {tau:8.5e} " \
+               "{meritf:8.5e} {meritfs: 8.5e}".format(
         it=iteration, fval=fval, frval=frval, normg=normg, normx=normx,
-        normv=normv, normu=normu, norms=norms, normc=normc, norma=norma, delta_qk=delta_qk,
-        alpha=alpha, KKT=KKTnorm, tau=tau, meritf=meritf
+        normv=normv, normu=normu, norms=norms, normc=normc, norma=norma, tr_radius=tr_radius, delta_qk=delta_qk,
+        alpha=alpha, KKT=KKTnorm, tau=tau, meritf=meritf, meritfs = meritfs
     )
     logger.info(contents)
     

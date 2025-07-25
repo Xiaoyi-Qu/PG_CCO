@@ -16,6 +16,10 @@ class CanonicalCorrelation:
         self.x0 = data['x0']
         self.nx = data['nx']
         self.ny = data['ny']
+        self.name = "SCCA"
+        self.n = self.nx
+        self.m = self.mi = 2
+        self.me = 0
 
     def split_vars(self, z):
         wx = z[:self.nx]

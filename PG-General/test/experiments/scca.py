@@ -21,7 +21,7 @@ from backends.cca_data import DataSCCA
 from src.solver.solve import solve
 from src.solver.params import params
 
-def setup_problem(nx=40, ny=40, N=40, reg_param=1e-5):
+def setup_problem(nx=200, ny=200, N=200, reg_param=1e-3):
     # Initialize the CCA problem
     p = CanonicalCorrelation(DataSCCA(nx, ny, N))
 
@@ -40,7 +40,7 @@ def setup_problem(nx=40, ny=40, N=40, reg_param=1e-5):
     slack = np.array([0, 0]).reshape(2,1)
     x = np.concatenate((p.x0, slack), axis=0)
 
-    alpha = 10
+    alpha = 1
     return p, r, set_type, x, alpha
 
 def main():

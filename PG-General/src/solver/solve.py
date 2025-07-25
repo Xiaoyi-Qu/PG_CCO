@@ -84,6 +84,8 @@ def solve(p, r, bound_constraints, x, alpha, params):
     solver = AlgoBase_General(p, r, params)
 
     # Print the problem information
+    if p.name == "SCCA":
+        outID = f"SCCA_{r.penalty}"
     print_prob_info(p, r, outID)
 
     while True:
@@ -100,6 +102,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # c,J g = p.obj(x, gradient=True)[1] 
         c, J = p.cons(x, gradient=True)
         delta = projected_steepest_descent_direction(x, J.T@c, bound_constraints=bound_constraints)
+        v = np.zeros_like(x)
         if np.linalg.norm(delta, ord=2) <= 1e-12 and np.linalg.norm(c, ord=2) >= 1e-2:
             status = 2
             print("Infeasible stationary point!")
@@ -107,7 +110,12 @@ def solve(p, r, bound_constraints, x, alpha, params):
         elif np.linalg.norm(delta, ord=2) <= 1e-12:
             v = np.zeros_like(x)
         else:
-            v, beta_v = solver.solve_tr_bound(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+            if params["tr_bound_solver"] == "cauchy":
+                v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+            elif params["tr_bound_solver"] == "gurobi":
+                v, v_y, vstatus = solver.solve_tr_bound_gurobi(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+            else:
+                raise ValueError("Unknown trust region bound solver specified.")
             # print(beta_v)
         
         '''
@@ -124,8 +132,10 @@ def solve(p, r, bound_constraints, x, alpha, params):
         ustatus = list_uy[2]
 
         # print(f"u value:{u}, v value:{v}")
-        # s = u.reshape(-1,1) + v # scca test uncomment this.
-        s = u + v
+        if p.name == "SCCA":
+            s = u.reshape(-1,1) + v # scca test uncomment this.
+        else:
+            s = u + v
 
         '''
         ---------------------------------------------------------
@@ -155,7 +165,8 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # Update each iterate and proximal parameter
         if Phi(x + s) - Phi(x) <= -params["eta_alpha"] * Delta_qk:
             x = x + s
-            alpha = min(alpha/params['xi_alpha'], 1)
+            alpha = min(alpha/params['xi_alpha'], 2)
+            # alpha = min(alpha/params['xi_alpha'], 1.25)
         else:
             # x = x
             alpha = params['xi_alpha']*alpha
@@ -175,21 +186,23 @@ def solve(p, r, bound_constraints, x, alpha, params):
         norms = np.linalg.norm(s, ord = 2)
         normc = np.linalg.norm(p.cons(x), ord = 2)
         norma = np.linalg.norm(x[-p.m:], ord=np.inf)
+        tr_radius = params["kappav"] * alpha * np.linalg.norm(delta, ord=2)
         chi_measure = np.linalg.norm(s, ord = 2)/alpha
         delta_qk = Delta_qk
         KKTnorm = np.linalg.norm(s, ord = 2)/alpha
         tau = params["tau"]
         meritf = Phi(x)
+        meritfs = Phi(x+s)
 
         # Print each line
-        print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, delta_qk, alpha, KKTnorm,
-                               tau, meritf, outID)
+        print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, tr_radius, delta_qk, alpha, KKTnorm,
+                               tau, meritf, meritfs, outID)
 
     # Output information 
     info["x"] = x
     info["fval"] = p.obj(x)
     info["objective"] = p.obj(x) + r.obj(x)
-    info["constr_violation"] = normc
+    info["constr_violation"] = np.linalg.norm(p.cons(x), ord = 2)
     info["norma"] = norma
     info["chi_measure"] = chi_measure
     info["status"] = status
@@ -199,46 +212,3 @@ def solve(p, r, bound_constraints, x, alpha, params):
 
     return info
 
-
-
-
-
-
-
-
-
-# info["constraint_violation"] = np.linalg.norm(p.cons(x), ord = 2)
-# info["num_zero"] = sparsity
-# info["first_iter_sparsity_idnetified"] = iter_identify
-# info["sparsity_existence"] = judge
-# info["inf_norm_y"] = 0
-# info["prox_param"] = alpha
-# # info["chi_criteria"] = KKTnorm
-# info["chi_criteria"] = max(np.linalg.norm(u, ord = 2)/alpha, np.linalg.norm(c, ord = 2))
-# info["inf_norm_y"] = np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=inf)
-# info["status"] = status
-# info["ustatus"] = ustatus
-# info["iteration"] = iteration
-# info["func_eval"] = num_feval
-# info["grad_eval"] = num_geval
-# info["cons_eval"] = num_ceval
-# info["jacb_eval"] = num_Jeval
-# info["elapsed_time"] = elapsed_time
-
-# start_u = time.process_time()
-# if tangential_step_strategy == "ADMM":
-#     list_uy = algo.admm(x, v, alpha)
-# elif tangential_step_strategy == "Gurobi":
-#     list_uy = solve_qp_subproblem_gurobi(x, v, alpha, r.penalty, J)
-# time_u = time.process_time() - start_u
-
-# lagrange_multiplier = np.linalg.norm(y, ord = inf) # change 2-norm to inf-norm
-# rank = matrix_rank(J)
-# JTc   = np.dot(np.transpose(J),c)
-# # condJ = np.linalg.cond(J)
-# condJ = np.linalg.svd(J)[1][-1]
-# normJTc = np.linalg.norm(JTc, ord = 2)
-# Lipschtiz_const = 0
-# # Identify the first iteration where the sparsity is identified
-# if np.linalg.norm(x[p.p.n:p.p.n+p.p.m],ord=2) == 0 and iter_identify == 0:
-#     iter_identify = iteration

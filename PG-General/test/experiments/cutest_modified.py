@@ -7,6 +7,8 @@ Test problem 1:
     CUTEst variant test problem
     Criterion: problem with at least on inequality constraint
     Test on 96 - 14 = 82 test problems
+    
+    Retest S365
 """
 
 import argparse
@@ -51,7 +53,7 @@ def setup_problem(prob_name):
     # Access the regularization parameter
     # Specify regularization parameter
     reg_param = 0
-    with open("./preprocessing/multipliers.csv", 'r') as f1:
+    with open("/home/xiq322/PG_CCO/PG-General/test/experiments/preprocessing/multipliers.csv", 'r') as f1:
         dict_reader1 = DictReader(f1)
         prob_list = list(dict_reader1)
         for prob in prob_list:
@@ -74,10 +76,15 @@ def setup_problem(prob_name):
     # Initial values
     x0 = projection(p.x0, (bl, bu))
     slack0 = projection(np.zeros(dim_s), (cl, cu))
-    a0 = -(p.p.cons(x0) - slack0) # c(x, s) + a = 0
-
+    # a0 = -(p.p.cons(x0) - slack0) # c(x, s) + a = 0
+    a0 = np.zeros(dim_a) + 0.1
+    
     x_init = np.concatenate([x0, slack0, a0])  # Full initial vector
-    alpha = 1
+    # x_init = np.concatenate([x0, slack0, a0])  # Full initial vector
+    # a0 = -p.cons_noa(x_init)
+    # x_init = np.concatenate([x0, slack0, a0])  # Full initial vector
+
+    alpha = 10
 
     return p, r, bounds, x_init, alpha
 
@@ -85,7 +92,7 @@ def get_config():
     parser = argparse.ArgumentParser()
 
     # Add arguments
-    parser.add_argument("-n", "--name", type=str, default="HS71", help="Test problem name")
+    parser.add_argument("-n", "--name", type=str, default="POLAK1", help="Test problem name")
 
     # Parse arguments
     config = parser.parse_args()

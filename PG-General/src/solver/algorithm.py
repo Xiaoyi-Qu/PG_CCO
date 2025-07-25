@@ -21,7 +21,7 @@ class AlgoBase_General:
         self.r = r
         self.params = params
     
-    def solve_tr_bound(self, x, alpha, delta, bound_constraints=None):
+    def solve_tr_bound_cauchy(self, x, alpha, delta, bound_constraints=None):
         '''
         - compute direction vk
         '''
@@ -36,7 +36,9 @@ class AlgoBase_General:
 
         mk = lambda v: 0.5 * np.linalg.norm(c + J @ v, ord=2)**2
 
-        while True:
+        iter_monitor = 0
+
+        while iter_monitor <= 1000:
             x_trial = x - beta_k * grad_mk_0
             x_proj = projection(x_trial, bound_constraints=bound_constraints)
             vk_beta = x_proj - x
@@ -52,7 +54,91 @@ class AlgoBase_General:
 
             beta_k *= gamma
 
+            iter_monitor += 1
+
+        if iter_monitor == 1001:
+            raise SyntaxError
+
         return v, beta_k
+
+
+    def solve_tr_bound_gurobi(self, x, alpha, delta, bound_constraints=None):
+        '''
+        - compute direction vk 
+        - replace \ell_2 norm with \ell_inf norm
+        '''
+        p = self.p
+        kappav = self.params["kappav"]
+        c, J = p.cons(x, gradient=True)
+        n = len(x)
+        m = p.m
+        box_radius = kappav * alpha * delta
+        if box_radius <= 1e-5:
+            box_radius = 1e-5
+
+        # Create Gurobi model
+        model = gp.Model("TR_Bound")
+        # model.setParam('OutputFlag', 0)  # silence Gurobi output
+        model.setParam("Method", 0)
+
+        # Decision variables v ∈ R^n
+        # box_radius = kappav * alpha * delta
+        v = model.addMVar(n, name="v", lb=-box_radius, ub=box_radius)
+
+        # Objective
+        objective = gp.quicksum(
+            (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n))) *
+            (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n)))
+            for i in range(m)
+        )
+        model.setObjective(0.5 * objective, GRB.MINIMIZE)
+
+        # Quadratic objective: (1/2) * || c + J v ||_2^2
+        # expr = c + J @ v
+        # model.setObjective(0.5 * (expr @ expr), GRB.MINIMIZE)
+
+        if bound_constraints is not None:
+            lower_bounds, upper_bounds = bound_constraints
+            if len(x.shape) == 1:
+                lower = np.asarray(lower_bounds)
+                upper = np.asarray(upper_bounds)
+            else:
+                lower = np.asarray(lower_bounds).reshape(-1,1)
+                upper = np.asarray(upper_bounds).reshape(-1,1)
+            for i in range(len(lower)):
+                if lower[i] != -np.inf:
+                    model.addConstr(x[i] + v[i] >= lower[i], name=f"lower_bound_{i}")
+                if upper[i] != np.inf:
+                    model.addConstr(x[i] + v[i] <= upper[i], name=f"upper_bound_{i}")
+
+        # Write the model to an LP file
+        model.write("tr_bound.lp")
+
+        # Optimize the model
+        model.optimize()
+        status = model.status
+
+        vstore = []
+        dual = []
+
+        # Handle error from Gurobi
+        if status == 12 or status == 5:
+            v = np.zeros_like(x)
+            y = np.zeros(p.m + n)
+            return [v,y,status]
+        
+        # Obtain primal and dual solution
+        for var in model.getVars():
+            if "v" in var.VarName:
+                vstore.append(var.x)
+        for var in model.getConstrs():
+            dual.append(var.Pi)
+
+        # Store the dual in an array
+        v = np.asarray(vstore)
+        y = np.asarray(dual)
+
+        return [v,y,status]
 
 
     def solve_qp_subproblem_gurobi(self, x, v, alpha, J, bound_constraints=None):
@@ -125,6 +211,7 @@ class AlgoBase_General:
 
         # Handle error from Gurobi
         if status == 12 or status == 5:
+            y = np.zeros_like(x) # to be changed
             return [u,y,status]
         
         # Obtain primal and dual solution
