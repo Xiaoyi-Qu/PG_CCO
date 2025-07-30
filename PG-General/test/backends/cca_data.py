@@ -23,6 +23,9 @@ from sklearn.cross_decomposition import CCA
 
 def DataSCCA(nx, ny, N):
     print('Data is generating ...')
+    
+    # Set the seed
+    np.random.seed(42)  
 
     # Construct v1
     v1 = np.zeros((nx, 1))
@@ -68,7 +71,7 @@ def DataSCCA(nx, ny, N):
         'Qyy': Y @ Y.T,
         'nx': nx,
         'ny': ny,
-        'x0': np.concatenate((w_x.reshape((nx,1))+0.05, w_y.reshape((ny,1))+0.05),axis=0)
+        'x0': np.concatenate((w_x.reshape((nx,1)), w_y.reshape((ny,1))),axis=0)
     }
 
     print('Done with canonical correlation analysis data generation!!!')

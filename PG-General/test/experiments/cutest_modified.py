@@ -92,7 +92,8 @@ def get_config():
     parser = argparse.ArgumentParser()
 
     # Add arguments
-    parser.add_argument("-n", "--name", type=str, default="STANCMIN", help="Test problem name")
+    parser.add_argument("-n", "--name", type=str, default="HS101", help="Test problem name")
+    parser.add_argument("-k", "--kappav", type=float, default=0.02, help="Kappa value for trust region method")
 
     # Parse arguments
     config = parser.parse_args()
@@ -102,6 +103,7 @@ def get_config():
 def main(config):
     # Input problem name
     prob_name = config.name # "HS71" "HS72" "HS65" 
+    params["kappav_gurobi"] = config.kappav
 
     # Set up the problem
     p, r, set_type, x, alpha = setup_problem(prob_name)

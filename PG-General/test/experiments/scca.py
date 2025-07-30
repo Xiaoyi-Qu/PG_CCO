@@ -43,9 +43,23 @@ def setup_problem(nx=200, ny=200, N=200, reg_param=1e-3):
     alpha = 1
     return p, r, set_type, x, alpha
 
-def main():
+def get_config():
+    parser = argparse.ArgumentParser()
+
+    # Add arguments
+    parser.add_argument("-n", "--nx", type=int, default=200, help="Problem size")
+    parser.add_argument("-r", "--reg", type=float, default=1e-3, help="Regularization parameter")
+
+    # Parse arguments
+    config = parser.parse_args()
+
+    return config
+
+def main(config):
+    size = config.nx
+    reg = config.reg
     # Set up the problem
-    p, r, set_type, x, alpha = setup_problem()
+    p, r, set_type, x, alpha = setup_problem(nx=size, ny=size, N=size, reg_param=reg)
 
     # Solve the problem
     info = solve(p, r, set_type, x, alpha, params)
@@ -54,4 +68,4 @@ def main():
     # print(info)
 
 if __name__ == "__main__":
-    main()
+    main(get_config())

@@ -45,8 +45,8 @@ class CanonicalCorrelation:
         wx, wy, s1, s2 = self.split_vars(z)
 
         cons = np.array([
-            (wx.T @ self.Qxx @ wx).item() - s1,
-            (wy.T @ self.Qyy @ wy).item() - s2
+            (wx.T @ self.Qxx @ wx).item() - s1, # .item()
+            (wy.T @ self.Qyy @ wy).item() - s2  # .item()
         ])
 
         if gradient is True:

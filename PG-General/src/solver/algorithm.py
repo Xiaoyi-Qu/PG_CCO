@@ -12,7 +12,7 @@ sys.path.append("../..")
 
 import numpy as np
 import gurobipy as gp
-from gurobipy import GRB
+from gurobipy import GRB, GurobiError
 from src.utils.helper import projection
 
 class AlgoBase_General:
@@ -26,7 +26,7 @@ class AlgoBase_General:
         - compute direction vk
         '''
         v = np.zeros_like(x)
-        kappav = self.params["kappav"]
+        kappav = self.params["kappav_cauchy"]
         eta = self.params["eta_beta"]
         gamma = self.params["gamma_beta"]
         p = self.p
@@ -38,7 +38,7 @@ class AlgoBase_General:
 
         iter_monitor = 0
 
-        while iter_monitor <= 1000:
+        while iter_monitor <= 10000:
             x_trial = x - beta_k * grad_mk_0
             x_proj = projection(x_trial, bound_constraints=bound_constraints)
             vk_beta = x_proj - x
@@ -68,7 +68,7 @@ class AlgoBase_General:
         - replace \ell_2 norm with \ell_inf norm
         '''
         p = self.p
-        kappav = self.params["kappav"]
+        kappav = self.params["kappav_gurobi"]
         c, J = p.cons(x, gradient=True)
         n = len(x)
         m = p.m
@@ -79,23 +79,29 @@ class AlgoBase_General:
         # Create Gurobi model
         model = gp.Model("TR_Bound")
         # model.setParam('OutputFlag', 0)  # silence Gurobi output
-        model.setParam("Method", 0)
+        model.setParam("Method", 1)
+        # model.setParam("NumericFocus", 3)
+        # model.setParam("DualReductions", 0)
+        model.setParam('FeasibilityTol', 1e-6)
 
         # Decision variables v ∈ R^n
         # box_radius = kappav * alpha * delta
         v = model.addMVar(n, name="v", lb=-box_radius, ub=box_radius)
 
         # Objective
-        objective = gp.quicksum(
-            (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n))) *
-            (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n)))
-            for i in range(m)
-        )
-        model.setObjective(0.5 * objective, GRB.MINIMIZE)
+        # objective = gp.quicksum(
+        #     (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n))) *
+        #     (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n)))
+        #     for i in range(m)
+        # )
+        # model.setObjective(objective, GRB.MINIMIZE)
 
         # Quadratic objective: (1/2) * || c + J v ||_2^2
-        # expr = c + J @ v
-        # model.setObjective(0.5 * (expr @ expr), GRB.MINIMIZE)
+        JTJ = J.T @ J
+        JTc = J.T @ c
+
+        quad_expr = v @ JTJ @ v + 2 * JTc @ v
+        model.setObjective(quad_expr, GRB.MINIMIZE)
 
         if bound_constraints is not None:
             lower_bounds, upper_bounds = bound_constraints
@@ -106,16 +112,25 @@ class AlgoBase_General:
                 lower = np.asarray(lower_bounds).reshape(-1,1)
                 upper = np.asarray(upper_bounds).reshape(-1,1)
             for i in range(len(lower)):
-                if lower[i] != -np.inf:
+                if lower[i] != -np.inf and lower[i] != -1e+20:
                     model.addConstr(x[i] + v[i] >= lower[i], name=f"lower_bound_{i}")
-                if upper[i] != np.inf:
+                if upper[i] != np.inf and upper[i] != 1e+20:
                     model.addConstr(x[i] + v[i] <= upper[i], name=f"upper_bound_{i}")
 
         # Write the model to an LP file
         model.write("tr_bound.lp")
 
         # Optimize the model
-        model.optimize()
+        status = 0
+        try:
+            model.optimize()
+        except GurobiError as e:
+            if e.errno == 100001:
+                print("Internal Gurobi error: ", e.message)
+                status = 100001
+                v = np.zeros_like(x)
+                y = np.zeros(p.m + n)
+                return [v,y,status]
         status = model.status
 
         vstore = []
@@ -131,12 +146,16 @@ class AlgoBase_General:
         for var in model.getVars():
             if "v" in var.VarName:
                 vstore.append(var.x)
-        for var in model.getConstrs():
-            dual.append(var.Pi)
+        # for var in model.getConstrs():
+        #     dual.append(var.Pi)
 
         # Store the dual in an array
         v = np.asarray(vstore)
-        y = np.asarray(dual)
+        # y = np.asarray(dual)
+        y = np.zeros(p.m + n)
+
+        # Explicitly dispose of the model and env
+        model.dispose()
 
         return [v,y,status]
 
@@ -150,6 +169,7 @@ class AlgoBase_General:
         _, g = p.obj(x, gradient=True)
         n = len(x)
         indices = r.indices # SCCA problem
+        # print(indices)
 
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
@@ -160,6 +180,7 @@ class AlgoBase_General:
         # model.setParam("NumericFocus", 3)
         # model.setParam("ScaleFlag", 2)
         model.setParam("DualReductions", 0) # Enable more definitive conclusion when having INF_OR_UNBD status
+        model.setParam('FeasibilityTol', 1e-9)
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
@@ -167,10 +188,10 @@ class AlgoBase_General:
         q = model.addMVar(n, name="q", lb=0.0)  # negative part
 
         # Objective
-        model.setObjective(gp.quicksum(g[i]*(u[i]) for i in range(n)) + 
+        model.setObjective(0.0001 * (gp.quicksum(g[i]*(u[i]) for i in range(n)) + 
                            (1/(2*alpha))*gp.quicksum(pow(u[i],2) for i in range(n)) +
                            r.penalty*gp.quicksum(p[i] for i in indices) + 
-                           r.penalty*gp.quicksum(q[i] for i in indices), GRB.MINIMIZE)
+                           r.penalty*gp.quicksum(q[i] for i in indices)), GRB.MINIMIZE)
 
         # Equality constraint: Jk u = 0
         model.addConstr(J @ u == 0, name="Equality")
@@ -178,6 +199,11 @@ class AlgoBase_General:
         # Constraints due to reformulation
         for i in range(n):
             model.addConstr(x[i] + v[i] + u[i] == p[i] - q[i], name="Reformulate")
+            # model.addConstr(p[i] >= 0, name=f"Positive_{i}")
+            # model.addConstr(q[i] >= 0, name=f"Negative_{i}")
+        # for i in range(n-1):
+        #     model.addConstr(p[i] == 1.0, name=f"p_{i}")
+        #     model.addConstr(q[i] == 1.0, name=f"q_{i}")
 
         # Inequality constraint: xk + vk + u ∈ Ω (elementwise box constraints)
         if bound_constraints is not None:
@@ -189,14 +215,17 @@ class AlgoBase_General:
                 lower = np.asarray(lower_bounds).reshape(-1,1)
                 upper = np.asarray(upper_bounds).reshape(-1,1)
             for i in range(len(lower)):
-                if lower[i] != -np.inf:
+                if lower[i] != -np.inf and lower[i] != -1e+20:
                     model.addConstr(x[i] + v[i] + u[i] >= lower[i], name=f"lower_bound_{i}")
-                if upper[i] != np.inf:
+                if upper[i] != np.inf and upper[i] != 1e+20:
                     model.addConstr(x[i] + v[i] + u[i] <= upper[i], name=f"upper_bound_{i}")
 
         # Optimize the model
         model.optimize()
         status = model.status
+
+        # Write the model to an LP file
+        # model.write("qp_gurobi.lp")
 
         ustore = []
         pstore = []
@@ -242,7 +271,7 @@ class AlgoBase_General:
     #     pass
     
     
-    def update_tau(self, x, s, alpha, tau_prev):
+    def update_tau(self, x, s, v, alpha, tau_prev):
         """
         Update rule for the merit parameter tau as described in Equation (3.4).
         """
@@ -257,7 +286,10 @@ class AlgoBase_General:
         denominator = (g.T @ s + (0.5 * alpha) * np.linalg.norm(s, ord=2)**2 + rs - rx).item()
 
         # Compute numerator
-        numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ s, ord=2)
+        numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ v, ord=2)
+        # print("Numerator:", numerator)
+        if numerator < 0:
+            exit()
         
         # if np.linalg.norm(c, ord=2) < 1e-12:
         #     tauk_trial = math.inf
@@ -268,7 +300,7 @@ class AlgoBase_General:
         #         tauk_trial = math.inf
 
         # Compute tau_trial
-        if np.linalg.norm(c, ord=2) < 1e-12:
+        if np.linalg.norm(c, ord=2) < 1e-12 or numerator <= 0:
             tau_trial = np.inf
         else:
             if denominator <= 0:
