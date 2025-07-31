@@ -101,7 +101,6 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # Obtain normal direction vk by solving a trust region subproblem
         -----------------------------------------------------------------
         '''
-        # c,J g = p.obj(x, gradient=True)[1] 
         c, J = p.cons(x, gradient=True)
         delta = projected_steepest_descent_direction(x, J.T@c, bound_constraints=bound_constraints)
         delta_vk = projection(x-J.T@c, bound_constraints=bound_constraints) - x
@@ -115,18 +114,17 @@ def solve(p, r, bound_constraints, x, alpha, params):
         else:
             print(np.linalg.matrix_rank(J, tol=1e-10), J.shape[0])
             if params["tr_bound_solver"] == "cauchy" or (np.linalg.matrix_rank(J, tol=1e-10) < J.shape[0]):
-                v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+                v, _ = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
                 vmethod = "cauchy_J"
             elif params["tr_bound_solver"] == "gurobi":
-                v, v_y, vstatus = solver.solve_tr_bound_gurobi(x, alpha, np.linalg.norm(delta, ord=np.inf), bound_constraints=bound_constraints)
+                v, vstatus = solver.solve_tr_bound_gurobi(x, alpha, np.linalg.norm(delta, ord=np.inf), bound_constraints=bound_constraints)
                 vmethod = "gurobi"
                 if vstatus == 100001:
                     # exit() # Gurobi internal error
-                    v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+                    v, _ = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
                     vmethod = "cauchy_e"
             else:
                 raise ValueError("Unknown trust region bound solver specified.")
-            # print(beta_v)
         
         JTJ = J.T @ J
         JTc = J.T @ c
@@ -134,7 +132,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         # print(f"Value = {v @ JTJ @ v + 2 * JTc @ v}")
         if (v @ JTJ @ v + 2 * JTc @ v) > 0:
             # Check the rank of matrix J
-            v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+            v, _ = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
             vmethod = "cauchy_n"
             rank = np.linalg.matrix_rank(J, tol=1e-10)
             if rank < J.shape[0]:
@@ -152,7 +150,6 @@ def solve(p, r, bound_constraints, x, alpha, params):
         '''
         list_uy = solver.solve_qp_subproblem_gurobi(x, v, alpha, J, bound_constraints=bound_constraints)
         u = list_uy[0]
-        # y = list_uy[1]
         ustatus = list_uy[2]
 
         # print(f"u value:{u}, v value:{v}")
@@ -173,7 +170,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         ----------------------------------------------------------
         '''
         KKTnorm = np.linalg.norm(s, ord=2)/alpha
-        if ustatus == 5 or ustatus == 12:
+        if ustatus == 5 or ustatus == 12 or ustatus == 3:
             status = 3
             break
         elif np.linalg.norm(s, ord=2)/alpha <= tol_stationarity and np.linalg.norm(c, ord=2)<= tol_feasibility:
@@ -222,6 +219,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         meritfs = Phixs
         feasibility_check = np.linalg.norm(projection(x, bound_constraints=bound_constraints) - x, ord=2)
         vk1 = np.linalg.norm(delta_vk, ord=2)
+
         # Print each line
         print_iteration(iteration, fval, frval, normg, normx, normv, normu, norms, normc, norma, tr_radius, delta_qk, alpha, KKTnorm,
                                tau, meritf, meritfs, feasibility_check, vmethod, vk1, outID)

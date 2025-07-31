@@ -25,30 +25,30 @@ class AlgoBase_General:
         '''
         - compute direction vk
         '''
+        # Initialize
         v = np.zeros_like(x)
         kappav = self.params["kappav_cauchy"]
         eta = self.params["eta_beta"]
         gamma = self.params["gamma_beta"]
         p = self.p
+
+        # Evaluate constraint and Jacobian
         c, J = p.cons(x, gradient=True)
+
+        # Gradient of model at zero
         grad_mk_0 = J.T @ c
-        beta_k = beta_init = 1
+        beta_k = 1.0
+        iter_monitor = 0
 
         mk = lambda v: 0.5 * np.linalg.norm(c + J @ v, ord=2)**2
-
-        iter_monitor = 0
 
         while iter_monitor <= 10000:
             x_trial = x - beta_k * grad_mk_0
             x_proj = projection(x_trial, bound_constraints=bound_constraints)
             vk_beta = x_proj - x
-            
-            # print(kappav * alpha * delta, grad_mk_0.T @ vk_beta)
-            # print(vk_beta, 0)
-            # print(mk(vk_beta), mk(np.zeros_like(x)))
 
             if (np.linalg.norm(vk_beta, ord=2) <= kappav * alpha * delta and
-                mk(vk_beta) <= mk(np.zeros_like(x)) + self.params['eta_alpha'] * grad_mk_0.T @ vk_beta):
+                mk(vk_beta) <= mk(np.zeros_like(x)) + eta * grad_mk_0.T @ vk_beta):
                 v = vk_beta
                 break
 
@@ -56,8 +56,8 @@ class AlgoBase_General:
 
             iter_monitor += 1
 
-        if iter_monitor == 1001:
-            raise SyntaxError
+        if iter_monitor == 10001:
+            raise RuntimeError("Failed to solve_tr_bound_cauchy subproblem within 10000 iterations.")
 
         return v, beta_k
 
@@ -71,30 +71,18 @@ class AlgoBase_General:
         kappav = self.params["kappav_gurobi"]
         c, J = p.cons(x, gradient=True)
         n = len(x)
-        m = p.m
         box_radius = kappav * alpha * delta
         if box_radius <= 1e-16:
             box_radius = 1e-16
 
         # Create Gurobi model
         model = gp.Model("TR_Bound")
-        # model.setParam('OutputFlag', 0)  # silence Gurobi output
+        model.setParam('OutputFlag', 0)  # silence Gurobi output
         model.setParam("Method", 2)
-        # model.setParam("NumericFocus", 3)
-        model.setParam("DualReductions", 0)
         model.setParam('FeasibilityTol', 1e-8)
 
         # Decision variables v ∈ R^n
-        # box_radius = kappav * alpha * delta
         v = model.addMVar(n, name="v", lb=-box_radius, ub=box_radius)
-
-        # Objective
-        # objective = gp.quicksum(
-        #     (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n))) *
-        #     (c[i] + gp.quicksum(J[i, j] * v[j] for j in range(n)))
-        #     for i in range(m)
-        # )
-        # model.setObjective(objective, GRB.MINIMIZE)
 
         # Quadratic objective: (1/2) * || c + J v ||_2^2
         JTJ = J.T @ J
@@ -129,12 +117,10 @@ class AlgoBase_General:
                 print("Internal Gurobi error: ", e.message)
                 status = 100001
                 v = np.zeros_like(x)
-                y = np.zeros(p.m + n)
-                return [v,y,status]
+                return [v,status]
         status = model.status
 
         vstore = []
-        dual = []
 
         # Handle error from Gurobi
         if status == 12 or status == 5:
@@ -146,18 +132,14 @@ class AlgoBase_General:
         for var in model.getVars():
             if "v" in var.VarName:
                 vstore.append(var.x)
-        # for var in model.getConstrs():
-        #     dual.append(var.Pi)
 
         # Store the dual in an array
         v = np.asarray(vstore)
-        # y = np.asarray(dual)
-        y = np.zeros(p.m + n)
 
         # Explicitly dispose of the model and env
         model.dispose()
 
-        return [v,y,status]
+        return [v, status]
 
 
     def solve_qp_subproblem_gurobi(self, x, v, alpha, J, bound_constraints=None):
@@ -169,18 +151,17 @@ class AlgoBase_General:
         _, g = p.obj(x, gradient=True)
         n = len(x)
         indices = r.indices # SCCA problem
-        # print(indices)
 
         # Create Gurobi model
         model = gp.Model("QP_L1_pq")
-        model.setParam('OutputFlag', 0)  # silence Gurobi output
         
         # Set parameters
-        model.setParam("Method", 1)
-        # model.setParam("NumericFocus", 3)
-        # model.setParam("ScaleFlag", 2)
+        model.setParam('OutputFlag', 0)  # silence Gurobi output
+        model.setParam("Method", 1) # 0: primal simplex, 1: dual simplex, 2: barrier
         model.setParam("DualReductions", 0) # Enable more definitive conclusion when having INF_OR_UNBD status
         # model.setParam('FeasibilityTol', 1e-9)
+        # model.setParam("NumericFocus", 3)
+        # model.setParam("ScaleFlag", 2)
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
@@ -188,10 +169,10 @@ class AlgoBase_General:
         q = model.addMVar(n, name="q", lb=0.0)  # negative part
 
         # Objective
-        model.setObjective(0.0001 * (gp.quicksum(g[i]*(u[i]) for i in range(n)) + 
+        model.setObjective(gp.quicksum(g[i]*(u[i]) for i in range(n)) + 
                            (1/(2*alpha))*gp.quicksum(pow(u[i],2) for i in range(n)) +
                            r.penalty*gp.quicksum(p[i] for i in indices) + 
-                           r.penalty*gp.quicksum(q[i] for i in indices)), GRB.MINIMIZE)
+                           r.penalty*gp.quicksum(q[i] for i in indices), GRB.MINIMIZE)
 
         # Equality constraint: Jk u = 0
         model.addConstr(J @ u == 0, name="Equality")
@@ -199,11 +180,6 @@ class AlgoBase_General:
         # Constraints due to reformulation
         for i in range(n):
             model.addConstr(x[i] + v[i] + u[i] == p[i] - q[i], name="Reformulate")
-            # model.addConstr(p[i] >= 0, name=f"Positive_{i}")
-            # model.addConstr(q[i] >= 0, name=f"Negative_{i}")
-        # for i in range(n-1):
-        #     model.addConstr(p[i] == 1.0, name=f"p_{i}")
-        #     model.addConstr(q[i] == 1.0, name=f"q_{i}")
 
         # Inequality constraint: xk + vk + u ∈ Ω (elementwise box constraints)
         if bound_constraints is not None:
@@ -224,22 +200,14 @@ class AlgoBase_General:
         model.optimize()
         status = model.status
 
-        # Write the model to an LP file
-        # model.write("qp_gurobi.lp")
-
         ustore = []
         pstore = []
         qstore = []
         dual = []
         u = np.zeros(n)
-        # y = np.zeros(m+n+h) # incorrect modify this.
-        # y = np.zeros(m+m)
-        
-        # print information regarding the model 
-        # model.printQuality()
 
         # Handle error from Gurobi
-        if status == 12 or status == 5:
+        if status == 12 or status == 5 or status == 3:
             y = np.zeros_like(x) # to be changed
             return [u,y,status]
         
@@ -258,8 +226,6 @@ class AlgoBase_General:
         # Store the solution in an array
         for i in range(n):
             u[i] = pstore[i] - qstore[i] - x[i] - v[i]
-        # for j in range(m+n+2):
-        #     y[j] = dual[j]
         y = np.asarray(dual)
 
         return [u,y,status]
@@ -288,17 +254,8 @@ class AlgoBase_General:
 
         # Compute numerator
         numerator = np.linalg.norm(c, ord=2) - np.linalg.norm(c + J @ v, ord=2)
-        # print("Numerator:", numerator)
         if numerator < 0:
-            exit()
-        
-        # if np.linalg.norm(c, ord=2) < 1e-12:
-        #     tauk_trial = math.inf
-        # else:
-        #     if condition > 0: # Be careful, related to KKT residual
-        #         tauk_trial = (1 - sigmac)*(norm_c - norm_cJv)/condition
-        #     else:
-        #         tauk_trial = math.inf
+            raise ValueError("Numerator is negative, which is unexpected in this context.")
 
         # Compute tau_trial
         if np.linalg.norm(c, ord=2) < 1e-12 or numerator <= 0:
@@ -317,6 +274,6 @@ class AlgoBase_General:
 
         self.params["tau"] = tau
         
-        Delta_qk = (self.params["tau"]/(4 *alpha)) * np.linalg.norm(s, ord=2)**2 + self.params["sigmac"] * numerator
+        Delta_qk = (self.params["tau"]/(4 *alpha)) * np.linalg.norm(s, ord=2)**2 + sigmac * numerator
         
         return Delta_qk
