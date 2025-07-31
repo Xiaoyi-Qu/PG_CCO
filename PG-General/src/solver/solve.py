@@ -116,13 +116,14 @@ def solve(p, r, bound_constraints, x, alpha, params):
             print(np.linalg.matrix_rank(J, tol=1e-10), J.shape[0])
             if params["tr_bound_solver"] == "cauchy" or (np.linalg.matrix_rank(J, tol=1e-10) < J.shape[0]):
                 v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
-                vmethod = "cauchy"
+                vmethod = "cauchy_J"
             elif params["tr_bound_solver"] == "gurobi":
                 v, v_y, vstatus = solver.solve_tr_bound_gurobi(x, alpha, np.linalg.norm(delta, ord=np.inf), bound_constraints=bound_constraints)
                 vmethod = "gurobi"
                 if vstatus == 100001:
-                    exit() # Gurobi internal error
+                    # exit() # Gurobi internal error
                     v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
+                    vmethod = "cauchy_e"
             else:
                 raise ValueError("Unknown trust region bound solver specified.")
             # print(beta_v)
@@ -134,7 +135,7 @@ def solve(p, r, bound_constraints, x, alpha, params):
         if (v @ JTJ @ v + 2 * JTc @ v) > 0:
             # Check the rank of matrix J
             v, beta_v = solver.solve_tr_bound_cauchy(x, alpha, np.linalg.norm(delta, ord=2), bound_constraints=bound_constraints)
-            vmethod = "cauchy"
+            vmethod = "cauchy_n"
             rank = np.linalg.matrix_rank(J, tol=1e-10)
             if rank < J.shape[0]:
                 print(rank, J.shape[0])

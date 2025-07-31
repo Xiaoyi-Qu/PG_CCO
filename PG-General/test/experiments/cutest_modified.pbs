@@ -1,0 +1,17 @@
+#PBS -N small
+#PBS -e /home/xiq322/PG_CCO/PG-General/test/small.err
+#PBS -o /home/xiq322/PG_CCO/PG-General/test/small.out
+#PBS -l nodes=1:ppn=2
+#PBS -l vmem=8gb,pmem=8gb
+#PBS -q medium
+#PBS -V
+
+ulimit -a
+
+cd /home/xiq322/PG_CCO/PG-General/test/experiments
+
+# /home/xiq322/miniconda3/bin/python cutest_modified.py --name ERRINBAR --kappav_gurobi 0.02
+# /home/xiq322/miniconda3/bin/python cutest_modified.py --name GOFFIN --kappav_gurobi 0.02
+# /home/xiq322/miniconda3/bin/python cutest_modified.py --name HAIFAS --kappav_gurobi 0.02
+# /home/xiq322/miniconda3/bin/python cutest_modified.py --name HIMMELBI --kappav_gurobi 0.02
+/home/xiq322/miniconda3/bin/python cutest_modified.py --name HIMMELP2 --kappav_gurobi 0.02

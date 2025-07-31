@@ -2,7 +2,7 @@
 Estimate the Lagrange multiplier for the following optimization problem
     min  f(x)
     s.t. c(x)=0
-# A total of 96 test problems. 14 test problems are excluded since the return status is not optimal. The Lagrange multiplier does not exists.
+# A total of 96 test problems. 14 test problems are excluded since the return status is not optimal.
 '''
 
 from pyoptsparse import PSQP, SLSQP, IPOPT, Optimization

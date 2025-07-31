@@ -73,16 +73,16 @@ class AlgoBase_General:
         n = len(x)
         m = p.m
         box_radius = kappav * alpha * delta
-        # if box_radius <= 1e-8:
-        #     box_radius = 1e-8
+        if box_radius <= 1e-16:
+            box_radius = 1e-16
 
         # Create Gurobi model
         model = gp.Model("TR_Bound")
         # model.setParam('OutputFlag', 0)  # silence Gurobi output
-        model.setParam("Method", 1)
+        model.setParam("Method", 2)
         # model.setParam("NumericFocus", 3)
-        # model.setParam("DualReductions", 0)
-        model.setParam('FeasibilityTol', 1e-6)
+        model.setParam("DualReductions", 0)
+        model.setParam('FeasibilityTol', 1e-8)
 
         # Decision variables v ∈ R^n
         # box_radius = kappav * alpha * delta
@@ -176,11 +176,11 @@ class AlgoBase_General:
         model.setParam('OutputFlag', 0)  # silence Gurobi output
         
         # Set parameters
-        model.setParam("Method", 0)
+        model.setParam("Method", 1)
         # model.setParam("NumericFocus", 3)
         # model.setParam("ScaleFlag", 2)
         model.setParam("DualReductions", 0) # Enable more definitive conclusion when having INF_OR_UNBD status
-        model.setParam('FeasibilityTol', 1e-9)
+        # model.setParam('FeasibilityTol', 1e-9)
 
         # Variables
         u = model.addMVar(n, name="u", lb=-GRB.INFINITY)
@@ -243,6 +243,7 @@ class AlgoBase_General:
             y = np.zeros_like(x) # to be changed
             return [u,y,status]
         
+        print(status)
         # Obtain primal and dual solution
         for var in model.getVars():
             if "u" in var.VarName:
