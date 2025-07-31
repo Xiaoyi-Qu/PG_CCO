@@ -17,7 +17,6 @@ params["gamma_beta"] = 0.5
 params["eta_alpha"] = 1e-4
 params['xi_alpha'] = 0.5
 params["tau"] = 1
-params["reg_param_add"] = 10
 params["tr_bound_solver"] = "gurobi"  # Options: "cauchy", "gurobi"
 
 params["sigmac"] = 0.1

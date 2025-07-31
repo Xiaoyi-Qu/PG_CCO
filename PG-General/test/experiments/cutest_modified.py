@@ -58,25 +58,25 @@ def setup_problem(prob_name):
         prob_list = list(dict_reader1)
         for prob in prob_list:
             if prob["Problem Name"] == prob_name:
-                reg_param = round(np.float64(prob["Multiplier"])) + params["reg_param_add"]
+                reg_param = np.float64(prob["Multiplier"])
 
-    if prob_name == "HS106":
-        reg_param = 10
+    # if prob_name == "HS106":
+    #     reg_param = 10
 
-    if prob_name == "HS106":
-        reg_param = 10
+    # if prob_name == "HS106":
+    #     reg_param = 10
 
-    if prob_name == "ERRINBAR":
-        reg_param = 0.1
+    # if prob_name == "ERRINBAR":
+    #     reg_param = 0.1
     
-    if prob_name == "HS93":
-        reg_param = 10000
+    # if prob_name == "HS93":
+    #     reg_param = 10000
 
-    if prob_name == "TENBARS1":
-        reg_param = 100
+    # if prob_name == "TENBARS1":
+    #     reg_param = 100
 
-    if prob_name == "HS69":
-        reg_param = 10
+    # if prob_name == "HS69":
+    #     reg_param = 10
 
     # Regularizer on auxiliary variable a (last m entries)
     r = L1(penalty=reg_param, indices=list(range(n + mi, n + mi + m)))
@@ -94,7 +94,6 @@ def setup_problem(prob_name):
     # Initial values
     x0 = projection(p.x0, (bl, bu))
     slack0 = projection(np.zeros(dim_s), (cl, cu))
-    # a0 = -(p.p.cons(x0) - slack0) # c(x, s) + a = 0
     a0 = np.zeros(dim_a)
     
     # x_init = np.concatenate([x0, slack0, a0])  # Full initial vector
